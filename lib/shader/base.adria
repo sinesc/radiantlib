@@ -1,0 +1,18 @@
+
+var Shader = require('../shader');
+
+module Base = proto (Shader) {
+
+    fragmentSrc: resource('./base.fs'),
+    vertexSrc: resource('./base.vs'),
+
+    aVertexPosition: 0,
+    uMVMatrix: 0,
+    uPMatrix: 0,
+
+    register: func() {
+        this.registerAttribute('aVertexPosition');
+        this.registerUniform('uMVMatrix');
+        this.registerUniform('uPMatrix');
+    },
+};

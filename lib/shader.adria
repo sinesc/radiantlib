@@ -1,0 +1,92 @@
+
+module Shader = proto {
+
+    fragmentSrc: '',
+    vertexSrc: '',
+
+    program: null,
+    attributes: null,
+
+    constructor: func(radiant) {
+    
+        this.radiant = radiant;
+        this.attributes = [];
+
+        this.compile();
+        this.radiant.sm.push(this);
+        this.register();
+        this.radiant.sm.pop();
+    },
+
+    destructor: func() {
+        this.radiant.gl.deleteProgram(this.program);
+    },
+
+    /**
+     * register attributes and uniforms here
+     */
+    register: func() { },
+
+    /**
+     * registers an attribute
+     *
+     * @param string srcName name in shader source
+     * @param string propName name of the object property on this object that will refer to srcName
+     */
+    registerAttribute: func(string srcName, string propName = srcName) {
+
+        var gl = this.radiant.gl;
+
+        var attribLocation = gl.getAttribLocation(this.program, srcName);
+        gl.enableVertexAttribArray(attribLocation);
+        this.attributes.push(attribLocation);
+        this[propName] = attribLocation;
+    },
+
+    /**
+     * registers a uniform
+     *
+     * @param string srcName name in shader source
+     * @param string propName name of the object property on this object that will refer to srcName
+     */
+    registerUniform: func(string srcName, string propName = srcName) {
+        this[propName] = this.radiant.gl.getUniformLocation(this.program, srcName);
+    },
+
+    /**
+     * compile vertex and fragment source to program
+     */
+    compile: func() {
+
+        var gl = this.radiant.gl;
+
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, Private->createShader(gl.VERTEX_SHADER, this.vertexSrc));
+        gl.attachShader(shaderProgram, Private->createShader(gl.FRAGMENT_SHADER, this.fragmentSrc));
+        gl.linkProgram(shaderProgram);
+
+        if (gl.getProgramParameter(shaderProgram, gl.LINK_STATUS) !== true) {
+            throw new Exception('Error linking shaders');
+        }
+
+        this.program = shaderProgram;
+    },
+};
+
+var Private = proto {
+
+    createShader: func(type, src) {
+
+        var gl = this.radiant.gl;
+
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+
+        if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) !== true) {
+            throw new Exception('Error compiling shader');
+        }
+
+        return shader;
+    },
+};

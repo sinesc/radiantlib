@@ -1,0 +1,6 @@
+
+var Radiant = require('./lib/radiant');
+
+var radiant = new Radiant(640, 480);
+
+document.body.appendChild(radiant.canvas);

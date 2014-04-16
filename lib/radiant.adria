@@ -1,0 +1,110 @@
+
+var ShaderManager = require('./shader_manager');
+global mat4 import mat4;
+
+module Radiant = proto {
+
+    ratio   : 1,
+
+    canvas  : null,
+    sm      : null,
+    gl      : null,
+
+    constructor: func(finite width, finite height, canvas = null, boolean transparent = false, boolean antialiasing = false) {
+
+        this.canvas = canvas !== null ? canvas : document.createElement('canvas');
+
+        this.width = width;
+        this.height = height;
+
+        this.canvas.addEventListener('webglcontextlost', this.handleContextLost.bind(this), false);
+        this.canvas.addEventListener('webglcontextrestored', this.handleContextRestored.bind(this), false);
+
+        var options = {
+            alpha               : transparent,
+            antialias           : antialiasing,
+            premultipliedAlpha  : transparent === false,
+            stencil             : true
+        };
+
+        try {
+            this.gl = this.canvas.getContext('experimental-webgl', options);
+        } catch (e) {
+            try {
+                this.gl = this.canvas.getContext('webgl', options);
+            } catch (e) {
+                throw new Exception('Error initializing webgl context');
+            }
+        }
+
+        this.sm = new ShaderManager(this);
+
+        this.test();
+    },
+
+    test: func() {
+
+        var Base = require('./shader/base');
+
+        var base = new Base(this);
+        this.sm.use(base);
+
+        var gl = this.gl;
+
+    var mvMatrix = mat4.create();
+    var pMatrix = mat4.create();
+
+        var triangleVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        var vertices = [
+             0.0,  1.0,  0.0,
+            -1.0, -1.0,  0.0,
+             1.0, -1.0,  0.0
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        triangleVertexPositionBuffer.itemSize = 3;
+        triangleVertexPositionBuffer.numItems = 3;
+
+        gl.viewport(0, 0, this.width, this.height);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        mat4.perspective(45, this.width / this.height, 0.1, 100.0, pMatrix);
+
+        mat4.identity(mvMatrix);
+
+        mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        gl.vertexAttribPointer(base.aVertexPosition, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.uniformMatrix4fv(base.uPMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(base.uMVMatrix, false, mvMatrix);
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+        gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
+    },
+
+    width: prop {
+        set: func(value) {
+            this.canvas.width = value;
+        },
+        get: func() {
+            return this.canvas.width;
+        }
+    },
+
+    height: prop {
+        set: func(value) {
+            this.canvas.height = value;
+        },
+        get: func() {
+            return this.canvas.height;
+        }
+    },
+
+    handleContextLost: func() {
+    },
+
+    handleContextRestored: func() {
+    }
+};

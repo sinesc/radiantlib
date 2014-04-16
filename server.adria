@@ -1,0 +1,134 @@
+/*
+ * tq2d JavaScript Sidescroller Engine
+ * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+require('astd/prototype').extend();
+
+var http = require('http');
+var fs = require('fs');
+var cp = require('child_process');
+var path = require('path');
+
+var files = [ './test.abc' ];
+
+var monitor = func(file) {
+
+    console.log('[server] monitoring ' + file);
+
+    var child = cp.execFile(
+        'adria',
+        [ '-c', path.basename(file) ],
+        { cwd: path.dirname(file) }/*,
+        func(error, stdout, stderr) {
+            if (error instanceof Error) {
+                console.log('[' + file + '] ' + stderr.replace(/\n$/, ''));
+            } else {
+                console.log('[' + file + '] exited.');
+            }
+        }*/
+    );
+
+    var prefixMessage = func(message) {
+        var lines = message.trim().split('\n');
+        for(var id, line in lines) {
+            lines[id] = '[' + file + '] ' + line + '\n';
+        }
+        return lines.join('');
+    };
+
+    child.stdout.on('data', func(chunk) {
+        process.stdout.write(prefixMessage(chunk.toString()));
+    });
+
+    child.stderr.on('data', func(chunk) {
+        process.stderr.write(prefixMessage(chunk.toString()));
+    });
+};
+
+for (var _, file in files) {
+    monitor(file);
+}
+
+// create server
+
+var errorResponse = func(response, code, message) {
+    response.writeHead(code, { 'Content-Type': 'text/plain' });
+    response.end(message);
+};
+
+var server = http.createServer(func(request, response) {
+
+    var filename = null;
+    var postfix = null;
+    var header = null;
+
+    if (request.url === '/index.html' || request.url === '/') {
+
+        header = [ 200, { 'Content-Type': 'text/html' } ];
+        filename = 'index';
+        postfix = '.html';
+
+    } else {
+
+        if (request.url.hasPostfix('.js')) {
+            header = [ 200, { 'Content-Type': 'application/javascript' } ];
+            postfix = '.js';
+        } else if (request.url.hasPostfix('.png')) {
+            header = [ 200, { 'Content-Type': 'image/png' } ];
+            postfix = '.png';
+        } else if (request.url.hasPostfix('.jpg')) {
+            header = [ 200, { 'Content-Type': 'image/jpg' } ];
+            postfix = '.jpg';
+        } else if (request.url.hasPostfix('.gif')) {
+            header = [ 200, { 'Content-Type': 'image/gif' } ];
+            postfix = '.gif';
+        } else if (request.url.hasPostfix('.ogg')) {
+            header = [ 200, { 'Content-Type': 'audio/ogg' } ];
+            postfix = '.ogg';
+        } else if (request.url.hasPostfix('.ttf')) {
+            header = [ 200, { 'Content-Type': 'application/x-font-ttf' } ];
+            postfix = '.ttf';
+        }
+
+        filename = './www/' + request.url.substr(1).replace(postfix, '').replace(/[^a-z0-9\-\_\/\.]/ig, '');
+    }
+
+    // send response
+
+    if (postfix !== null && filename !== null) {
+
+        fs.readFile(filename + postfix, func(err, data) {
+            if (err !== null) {
+                console.log('[server] 404 ' + request.url + ' => ' + filename + postfix);
+                errorResponse(response, 404, 'not found');
+            } else {
+                //console.log('[server] 200 ' + request.url + ' => ' + filename + postfix);
+                response.writeHead.apply(response, header);
+                response.end(data);
+            }
+        });
+
+    } else {
+
+        console.log('[server] 404 ' + request.url + ' => unmapped');
+        errorResponse(response, 404, 'not found');
+    }
+});
+
+server.listen(80, func() {
+
+    console.log('[server] Listening on port 80');
+});

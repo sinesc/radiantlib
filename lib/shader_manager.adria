@@ -1,0 +1,50 @@
+
+module ShaderManager = proto {
+
+    radiant: null,
+    activeShader: null,
+    shaderStack: null;
+
+    constructor: func(object radiant) {
+        this.radiant = radiant;
+        this.shaderStack = [];
+    },
+
+    use: func(object shader) {
+
+        var gl = this.radiant.gl;
+        var attributes = shader.attributes;
+
+        this.activeShader = shader;
+        gl.useProgram(shader.program);
+
+        for (var i = 0, num = attributes.length; i < num; i++) {
+            gl.enableVertexAttribArray(i);
+        }
+    },
+
+    /**
+     * use given shader, push previous onto stack
+     *
+     * @param Shader shader
+     * @return Shader the previously used shader
+     */
+    push: func(object shader) {
+        var oldShader = this.activeShader;
+        this.shaderStack.push(oldShader);
+        this.use(shader);
+        return oldShader;
+    },
+
+    /**
+     * pop previous shader from stack and use it
+     *
+     * @param Shader shader
+     * @return Shader the previously used shader
+     */
+    pop: func() {
+        var oldShader = this.activeShader;
+        this.use(this.shaderStack.pop());
+        return oldShader;
+    }
+};
