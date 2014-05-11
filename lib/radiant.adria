@@ -1,30 +1,73 @@
-
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+var Listenable = require('astd/listenable');
 var ShaderManager = require('./shader_manager');
-global mat4 import mat4;
+var GL = window.WebGLRenderingContext;
 
-module Radiant = proto {
+/**
+ * radiant 2d context
+ *
+ * @event contextlost
+ * @event contextrestored
+ * @event resize
+ */
+module Radiant = proto (Listenable) {
 
-    ratio   : 1,
+    blendModes: {
+        COPY    : [ GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_ALPHA ],
+        NO_ALPHA: [ GL.ONE,                 GL.ZERO ],
+        LIGHTEN : [ GL.SRC_ALPHA,           GL.ONE ],
+        OVERLAY : [ GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_COLOR ],
+        OUTLINE : [ GL.ONE_MINUS_SRC_ALPHA, GL.ONE ],
+        EDGES   : [ GL.DST_ALPHA,           GL.ONE_MINUS_SRC_ALPHA ],
+        MASK    : [ GL.CONSTANT_COLOR,      GL.ONE_MINUS_SRC_ALPHA ],
+    },
 
     canvas  : null,
     sm      : null,
     gl      : null,
 
-    constructor: func(finite width, finite height, canvas = null, boolean transparent = false, boolean antialiasing = false) {
+    /**
+     * construct new radiant context
+     *
+     * @param finite width
+     * @param finite height
+     * @param boolean transparent
+     * @param boolean antialiasing
+     * @param HTMLCanvasElement canvas
+     */
+    constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, canvas = null) {
 
         this.canvas = canvas !== null ? canvas : document.createElement('canvas');
 
-        this.width = width;
-        this.height = height;
+        // forward events as Listenable events
 
-        this.canvas.addEventListener('webglcontextlost', this.handleContextLost.bind(this), false);
-        this.canvas.addEventListener('webglcontextrestored', this.handleContextRestored.bind(this), false);
+        this.canvas.addEventListener('webglcontextlost', this.forward('contextlost'), false);
+        this.canvas.addEventListener('webglcontextrestored', this.forward('contextrestored'), false);
+
+        // create webgl context with given options
 
         var options = {
-            alpha               : transparent,
-            antialias           : antialiasing,
-            premultipliedAlpha  : transparent === false,
-            stencil             : true
+            alpha                   : transparent,
+            antialias               : antialiasing,
+            preserveDrawingBuffer   : true
+            /*premultipliedAlpha  : false,
+            stencil             : true*/
         };
 
         try {
@@ -37,74 +80,77 @@ module Radiant = proto {
             }
         }
 
-        this.sm = new ShaderManager(this);
+        this.setSize(width, height);
 
-        this.test();
-    },
-
-    test: func() {
-
-        var Base = require('./shader/base');
-
-        var base = new Base(this);
-        this.sm.use(base);
+        // enable disable unused/required features
 
         var gl = this.gl;
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
 
-    var mvMatrix = mat4.create();
-    var pMatrix = mat4.create();
-
-        var triangleVertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-        var vertices = [
-             0.0,  1.0,  0.0,
-            -1.0, -1.0,  0.0,
-             1.0, -1.0,  0.0
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-        triangleVertexPositionBuffer.itemSize = 3;
-        triangleVertexPositionBuffer.numItems = 3;
-
-        gl.viewport(0, 0, this.width, this.height);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        mat4.perspective(45, this.width / this.height, 0.1, 100.0, pMatrix);
-
-        mat4.identity(mvMatrix);
-
-        mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
-        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-        gl.vertexAttribPointer(base.aVertexPosition, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.uniformMatrix4fv(base.uPMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(base.uMVMatrix, false, mvMatrix);
-
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
+        this.blendMode = this.blendModes.COPY;
+        this.sm = new ShaderManager(this);
     },
 
+    /**
+     * get/set blendmode (@see Radiant::blendModes)
+     *
+     * @param Array mode
+     */
+    blendMode: prop {
+        set: func(Array mode) {
+            this.gl.blendFunc(mode[0], mode[1]);
+            storage = mode;
+        },
+        get: func() {
+            return storage;
+        }
+    },
+
+    /**
+     * set canvas size
+     *
+     * @param finite width
+     * @param finite height
+     */
+    setSize: func(finite width, finite height) {
+
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.gl.viewport(0, 0, width, height);
+        this.execute('resize', width, height);
+    },
+
+    /**
+     * get/set canvas width
+     */
     width: prop {
         set: func(value) {
-            this.canvas.width = value;
+            if (value !== this.canvas.width) {
+                this.canvas.width = value;
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                this.execute('resize', this.canvas.width, this.canvas.height);
+            }
         },
         get: func() {
             return this.canvas.width;
         }
     },
 
+    /**
+     * get/set canvas height
+     */
     height: prop {
         set: func(value) {
-            this.canvas.height = value;
+            if (value !== this.canvas.height) {
+                this.canvas.height = value;
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                this.execute('resize', this.canvas.width, this.canvas.height);
+            }
         },
         get: func() {
             return this.canvas.height;
         }
     },
-
-    handleContextLost: func() {
-    },
-
-    handleContextRestored: func() {
-    }
 };

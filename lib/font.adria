@@ -1,0 +1,157 @@
+﻿/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+var Listenable = require('astd/listenable');
+var Texture = require('./texture');
+
+/**
+ * font
+ *
+ * @event load()
+ */
+module Font = proto (Listenable) {
+
+    characterSet: '^1234567890ß´°!"§$%&/()=?`qwertzuiopü+QWERTZUIOPÜ*asdfghjklöä#ASDFGHJKLÖÄ\'<yxcvbnm,.->YXCVBNM;:_ ²{[]}\\@€~|µ',
+
+    radiant     : null,
+    characters  : null,
+    name        : '',
+    texture     : null,
+
+    constructor: func(object radiant, string? name = null) {
+
+        this.radiant = radiant;
+
+        if (name !== null) {
+            this.load(name);
+        }
+    },
+
+    ready: prop {
+        get: func() {
+            return this.characters !== null;
+        }
+    },
+
+    load: func(string name) {
+
+        var ctx = document.createElement('canvas').getContext('2d');
+        document.body.appendChild(ctx.canvas);
+        this.loadFont(name, ctx, this.scanFont);
+    },
+
+    loadFont: func(string name, object ctx, func callback) {
+
+        var sizeMatch = /([0-9]+(px|pt|em))/;
+        var testString = '^,Wmuli178 _*~#';
+
+        if (sizeMatch.test(name) !== true) {
+            throw new Exception('font size must be specified');
+        }
+
+        var that = this;
+        var fontSize = name.match(sizeMatch)[1];
+
+        ctx.font = fontSize + ' sans-serif';
+        var initialMeasure = ctx.measureText(testString);
+        ctx.font = name;
+
+        var interval = setInterval(func() {
+            var measure = ctx.measureText(testString);
+
+            if (measure.width !== initialMeasure.width) {
+                clearInterval(interval);
+                callback.call(that, name, ctx);
+            }
+        }, 10);
+    },
+
+    scanFont: func(string name, object ctx) {
+
+        var charSet = this.characterSet;
+        var chars = Object.create(null);
+
+        // measure letters, determine required canvas size
+
+        var canvasWidth = 0;
+        var canvasHeight = 0;
+        var fakeHeight = ctx.measureText('m').width * 2; // terrible api doesn't provide height
+
+        for (var i = 0; i < charSet.length; i++) {
+            var letter = charSet.substr(i, 1);
+            var measure = ctx.measureText(letter);
+            chars[letter] = new Character(canvasWidth, 0, measure.width, fakeHeight /*measure.height*/);
+            canvasWidth += measure.width + 4;
+            canvasHeight = Math.max(canvasHeight, fakeHeight /*measure.height*/);
+        }
+
+        // size canvas, create characters
+
+        var canvas = ctx.canvas;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textBaseline = 'top';
+        ctx.font = name;
+
+        for (var letter, character in chars) {
+            ctx.fillText(letter, character.x, character.y);
+        }
+
+        // create texture from canvas
+
+        var uv = null;
+
+        if (this.texture !== null) {
+            this.texture.destructor();
+        }
+
+        this.texture = new Texture(this.radiant, canvas);
+
+        for (var letter, character in chars) {
+            uv = this.texture.getUV(character.x, character.y);
+            character.u0 = uv[0];
+            character.v0 = uv[1];
+            uv = this.texture.getUV(character.x + character.width, character.y + character.height);
+            character.u1 = uv[0];
+            character.v1 = uv[1];
+        }
+
+        // done
+
+        this.characters = chars;
+        this.trigger('load');
+    },
+};
+
+export Character = proto {
+    x       : 0,
+    y       : 0,
+    width   : 0,
+    height  : 0,
+    u0      : 0.0,
+    v0      : 0.0,
+    u1      : 0.0,
+    v1      : 0.0,
+    constructor: func(finite x, finite y, finite width, finite height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+};

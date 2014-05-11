@@ -1,0 +1,101 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+var Renderer = require('../renderer');
+var Plain = require('../shader/plain');
+var Color = require('../color');
+
+module Sprites = proto (Renderer) {
+
+    Shader: Plain,
+
+    /**
+     * add a sprite to be drawn
+     *
+     * @param Sprite sprite
+     * @param integer frameId
+     * @param finite x
+     * @param finite y
+     * @param finite/Color color
+     * @param finite rotation
+     * @param finite scaleX
+     * @param finite scaleY
+     */
+    add: func(object sprite, finite frameId, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+
+        this.setupState(sprite.texture);
+
+        var index = this.size * this.shader.attributeSize;
+        var vertices = this.vertices;
+        var intView = this.vertexIntView;
+        var frame = sprite.frames[frameId];
+        var colorValue = color instanceof Color? color.value : color;
+
+        // corner positions relative to x/y
+
+        var offsetX0 = (-sprite.anchorX) * scaleX;
+        var offsetX1 = (sprite.width - sprite.anchorX) * scaleX;
+        var offsetY0 = (-sprite.anchorY) * scaleY;
+        var offsetY1 = (sprite.height - sprite.anchorY) * scaleY;
+
+        // bottom right
+
+        vertices[index++] = x;
+        vertices[index++] = y;
+        vertices[index++] = offsetX1;
+        vertices[index++] = offsetY1;
+        vertices[index++] = frame.u1;
+        vertices[index++] = frame.v1;
+        intView[index++] = colorValue;
+        vertices[index++] = rotation;
+
+        // bottom left
+
+        vertices[index++] = x;
+        vertices[index++] = y;
+        vertices[index++] = offsetX0;
+        vertices[index++] = offsetY1;
+        vertices[index++] = frame.u0;
+        vertices[index++] = frame.v1;
+        intView[index++] = colorValue;
+        vertices[index++] = rotation;
+
+        // top left
+
+        vertices[index++] = x;
+        vertices[index++] = y;
+        vertices[index++] = offsetX0;
+        vertices[index++] = offsetY0;
+        vertices[index++] = frame.u0;
+        vertices[index++] = frame.v0;
+        intView[index++] = colorValue;
+        vertices[index++] = rotation;
+
+        // top right
+
+        vertices[index++] = x;
+        vertices[index++] = y;
+        vertices[index++] = offsetX1;
+        vertices[index++] = offsetY0;
+        vertices[index++] = frame.u1;
+        vertices[index++] = frame.v0;
+        intView[index++] = colorValue;
+        vertices[index++] = rotation;
+
+        this.size++;
+    },
+};

@@ -1,0 +1,241 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+var Listenable = require('astd/listenable');
+var Texture = require('./texture');
+
+/**
+ * individual sprite
+ *
+ * @event load()
+ */
+module Sprite = proto (Listenable) {
+
+    radiant: null,
+
+    /**
+     * image object
+     */
+    texture: null,
+
+    /**
+     * array of frame coordinates for the loaded sprite
+     */
+    frames: null,
+
+    /**
+     * set to true once the sprite is ready
+     */
+    ready: false,
+
+    /**
+     * @var integer width of the sprite
+     */
+    width: 0,
+
+    /**
+     * @var integer height of the sprite
+     */
+    height: 0,
+
+    /**
+     * @var integer x anchor position
+     */
+    anchorX: 0,
+
+    /**
+     * @var integer y anchor position
+     */
+    anchorY: 0,
+
+    /**
+     * construct sprite from filename or parameter object
+     *
+     * @param string/Parameter params
+     */
+    constructor: func(object radiant, params) {
+
+        this.radiant = radiant;
+        this.frames = [];
+
+        if (typeof params === 'string') {
+            params = new Parameter(params);
+        }
+
+        // load image
+
+        var that = this;
+        var image = document.createElement('img');
+        image.src = params.file;
+
+        image.addEventListener('load', func listener() {
+            image.removeEventListener('load', listener);
+            that.generate(image, params);
+        });
+    },
+
+    /**
+     * @var finite anchor u position (0..1 is inside the sprite)
+     */
+    anchorU: prop {
+        get: func() {
+            return this.anchorX / this.width;
+        },
+        set: func(value) {
+            this.anchorX = value * this.width;
+        }
+    },
+
+    /**
+     * @var finite anchor v position (0..1 is inside the sprite)
+     */
+    anchorV: prop {
+        get: func() {
+            return this.anchorY / this.height;
+        },
+        set: func(value) {
+            this.anchorY = value * this.height;
+        }
+    },
+
+    /**
+     * called by constructor once the sprite's image is loaded, computes sprite frames
+     *
+     * @param Image image
+     * @param Parameter params
+     */
+    generate: func(object image, Parameter params) {
+
+        // create texture
+
+        this.texture = new Texture(this.radiant, image);
+
+        // try layout auto-detection
+
+        var layout = params.layout;
+
+        if (layout === Parameter::LAYOUT_AUTO) {
+            layout = (params.width * params.count === this.texture.width ? Parameter::LAYOUT_HORIZONTAL : Parameter::LAYOUT_VERTICAL);
+        } else {
+            layout = params.layout;
+        }
+
+        // compute frames
+
+        this.width = params.width;
+        this.height = params.height;
+        this.anchorU = params.anchorU;
+        this.anchorV = params.anchorV;
+
+        for (var id = params.start, end = params.start + params.count; id < end; id++) {
+            this.frames.push(getFrame(layout, this.texture, params.width, params.height, id));
+        }
+
+        this.ready = true;
+        this.execute('load');
+    }
+};
+
+/**
+ * calculates the coordinates for a specific frame using given layout
+ *
+ * @param string layout horizontal (ids count left to right, top to bottom) or vertical (ids count top to bottom, left to right)
+ * @param object texture
+ * @param finite spriteWidth width for individual sprite frames
+ * @param finite spriteHeight height for individual sprite frames
+ * @param finite id frame id
+ */
+var getFrame = func(string layout, object texture, finite spriteWidth, finite spriteHeight, finite id) {
+
+    // calculate x and y for given frame using defined layout order
+
+    var spl, x, y;
+
+    if (layout === Parameter::LAYOUT_HORIZONTAL) {
+        spl = texture.width / spriteWidth;
+        x = Math.floor(id % spl) * spriteWidth;
+        y = Math.floor(id / spl) * spriteHeight;
+    } else {
+        spl = texture.height / spriteHeight;
+        x = Math.floor(id / spl) * spriteWidth;
+        y = Math.floor(id % spl) * spriteHeight;
+    }
+
+    return new Frame(texture, x, y, spriteWidth, spriteHeight);
+};
+
+/**
+ * describes a frame's u/v position within the sprite's texture
+ */
+export Frame = proto {
+
+    u0      : 0.0,
+    u1      : 0.0,
+    v0      : 0.0,
+    v1      : 0.0,
+
+    constructor: func(object texture, finite x, finite y, finite width, finite height) {
+
+        var uv0 = texture.getUV(x, y);
+        var uv1 = texture.getUV(x + width, y + height);
+
+        this.u0 = uv0[0];
+        this.u1 = uv1[0];
+        this.v0 = uv0[1];
+        this.v1 = uv1[1];
+    },
+};
+
+/**
+ * describes sprite construction properties
+ */
+export Parameter = proto {
+
+    /**
+     * frame layout types
+     */
+    LAYOUT_AUTO         : 'auto',
+    LAYOUT_HORIZONTAL   : 'horizontal',
+    LAYOUT_VERTICAL     : 'vertical',
+
+    file    : '',
+    width   : -1,
+    height  : -1,
+    anchorU : 0.5,
+    anchorV : 0.5,
+    start   : 0,
+    count   : 1,
+    layout  : 'vertical',
+
+    constructor: func(string? file = null) {
+
+        if (file === null) {
+            return;
+        }
+
+        this.file = file;
+
+        var match = file.match(/_([0-9]+)x([0-9]+)x([0-9]+)\./);
+
+        if (match !== null) {
+            this.width = parseInt(match[1]);
+            this.height = parseInt(match[2]);
+            this.count = parseInt(match[3]);
+            this.layout = Parameter::LAYOUT_AUTO;
+        }
+    },
+};

@@ -1,24 +1,74 @@
-
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 module Shader = proto {
+
+    radiant: null,
 
     fragmentSrc: '',
     vertexSrc: '',
 
+    /**
+     * @var actual gl shader program
+     */
     program: null,
+
+    /**
+     * @var Array registered <Attribute>s
+     */
     attributes: null,
 
+    /**
+     * @var Array registered <Uniform>s
+     */
+    uniforms: null,
+
+    /**
+     * @var boolean true after a uniform was changed until change was propagated to gl
+     */
+    uniformUpdateRequired: false,
+
+    /**
+     * @var finite total attributes size in bytes
+     */
+    attributeSize: 0,
+
+    /**
+     * construct new shader
+     *
+     * @param Radiant radiant
+     */
     constructor: func(radiant) {
-    
+
         this.radiant = radiant;
         this.attributes = [];
-
-        this.compile();
-        this.radiant.sm.push(this);
-        this.register();
-        this.radiant.sm.pop();
+        this.uniforms = [];
+        this.generate();
+        this.radiant.on('contextrestored', this, this.generate);
     },
 
+    /**
+     * destroy shader and release resources
+     */
     destructor: func() {
+
+        this.radiant = null;
+        this.attributes = null;
+        this.uniforms = null;
         this.radiant.gl.deleteProgram(this.program);
     },
 
@@ -28,19 +78,59 @@ module Shader = proto {
     register: func() { },
 
     /**
+     * generate shader (compile it, associate uniforms and attributes)
+     */
+    generate: func() {
+
+        var gl = this.radiant.gl;
+
+        this.compile();
+        gl.useProgram(this.program);
+        this.register();
+
+        if (this.radiant.sm.activeShader !== null) {
+            gl.useProgram(this.radiant.sm.activeShader.program);
+        }
+    },
+
+    /**
      * registers an attribute
      *
      * @param string srcName name in shader source
+     * @param integer parts
+     * @param integer type GL type
+     * @param boolean normalized
      * @param string propName name of the object property on this object that will refer to srcName
      */
-    registerAttribute: func(string srcName, string propName = srcName) {
+    registerAttribute: func(string srcName, finite parts, finite type, boolean normalized = false, string propName = srcName) {
 
         var gl = this.radiant.gl;
 
         var attribLocation = gl.getAttribLocation(this.program, srcName);
         gl.enableVertexAttribArray(attribLocation);
-        this.attributes.push(attribLocation);
-        this[propName] = attribLocation;
+
+        var attribute = new Attribute(attribLocation, parts, type, normalized);
+        this[propName] = attribute;
+
+        this.attributes.push(attribute);
+        this.attributeSize += attribute.size;
+    },
+
+    /**
+     * use vertex attribute pointers from this shader
+     */
+    useAttributes: func() {
+
+        var gl = this.radiant.gl;
+        var attributes = this.attributes;
+        var offset = 0;
+
+        for (var i = 0, num = attributes.length; i < num; i++) {
+            var attribute = attributes[i];
+            //gl.enableVertexAttribArray(attribute.location);
+            gl.vertexAttribPointer(attribute.location, attribute.parts, attribute.type, attribute.normalized, this.attributeSize, offset);
+            offset += attribute.size;
+        }
     },
 
     /**
@@ -49,8 +139,48 @@ module Shader = proto {
      * @param string srcName name in shader source
      * @param string propName name of the object property on this object that will refer to srcName
      */
-    registerUniform: func(string srcName, string propName = srcName) {
-        this[propName] = this.radiant.gl.getUniformLocation(this.program, srcName);
+    registerUniform: func(string srcName, finite parts = 1, boolean isMatrix = false, boolean isFloat = isMatrix, string propName = srcName) {
+
+        var uniformLocation = this.radiant.gl.getUniformLocation(this.program, srcName);
+
+        var uniform = new Uniform(this, uniformLocation, parts, isMatrix, isFloat);
+        this[propName] = uniform;
+
+        this.uniforms.push(uniform);
+    },
+
+    /**
+     * set uniforms for this shader
+     */
+    useUniforms: func() {
+
+        var gl = this.radiant.gl;
+        var uniforms = this.uniforms;
+
+        for (var i = 0, num = uniforms.length; i < num; i++) {
+            var uniform = uniforms[i];
+            if (uniform.isMatrix) {
+                gl[uniform.funcName](uniform.location, false, uniform.value);
+            } else {
+                gl[uniform.funcName](uniform.location, uniform.value);
+            }
+        }
+    },
+
+    /**
+     * use this shader programm
+     */
+    use: func() {
+
+        var gl = this.radiant.gl;
+
+        gl.useProgram(this.program);
+        this.useAttributes();
+
+        if (this.uniformUpdateRequired) {
+            this.useUniforms();
+            this.uniformUpdateRequired = false;
+        }
     },
 
     /**
@@ -65,7 +195,7 @@ module Shader = proto {
         gl.attachShader(shaderProgram, Private->createShader(gl.FRAGMENT_SHADER, this.fragmentSrc));
         gl.linkProgram(shaderProgram);
 
-        if (gl.getProgramParameter(shaderProgram, gl.LINK_STATUS) !== true) {
+        if (gl.isContextLost() === false && gl.getProgramParameter(shaderProgram, gl.LINK_STATUS) !== true) {
             throw new Exception('Error linking shaders');
         }
 
@@ -73,9 +203,75 @@ module Shader = proto {
     },
 };
 
+var GL = window.WebGLRenderingContext;
+var typeSize = { };
+typeSize[GL.BYTE]             = 1;
+typeSize[GL.UNSIGNED_BYTE]    = 1;
+typeSize[GL.SHORT]            = 2;
+typeSize[GL.UNSIGNED_SHORT]   = 2;
+typeSize[GL.FIXED]            = 4;
+typeSize[GL.FLOAT]            = 4;
+
+export Uniform = proto {
+
+    shader      : null,
+    parts       : 0,
+    isFloat     : true,
+    location    : 0,
+    isMatrix    : false,
+    funcName    : '',
+
+    constructor: func(shader, loc, parts, isMatrix, isFloat) {
+
+        this.shader = shader;
+        this.parts = parts;
+        this.isFloat = isFloat;
+        this.location = loc;
+        this.isMatrix = isMatrix;
+
+        if (isMatrix) {
+            assert(parts >= 2 && parts <= 4);
+            assert(isFloat === true);
+            this.funcName = 'uniformMatrix' + parts + 'fv';
+        } else {
+            assert(parts >= 1 && parts <= 4);
+            this.funcName = 'uniform' + parts + (isFloat ? 'f' : 'i') + (parts > 1 ? 'v' : '');
+        }
+    },
+
+    value: prop {
+        set: func(val) {
+            assert(this.parts === 1 || (this.isFloat && val instanceof Float32Array) || (this.isFloat === false && val instanceof Int32Array));
+            assert(this.parts > 1 || isFinite(val));
+            storage = val;
+            this.shader.uniformUpdateRequired = true;
+        },
+        get: func() {
+            return storage;
+        }
+    },
+};
+
+export Attribute = proto {
+
+    parts       : 0,
+    type        : 0,
+    normalized  : false,
+    location    : 0,
+    size        : 0,
+
+    constructor: func(loc, parts, type, normalized) {
+        this.parts = parts;
+        this.type = type;
+        this.normalized = normalized;
+        this.location = loc;
+        this.size = parts * typeSize[type];
+    },
+};
+
 var Private = proto {
 
-    createShader: func(type, src) {
+    createShader: func(finite type, string src) {
 
         var gl = this.radiant.gl;
 
@@ -83,8 +279,8 @@ var Private = proto {
         gl.shaderSource(shader, src);
         gl.compileShader(shader);
 
-        if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) !== true) {
-            throw new Exception('Error compiling shader');
+        if (gl.isContextLost() === false && gl.getShaderParameter(shader, gl.COMPILE_STATUS) !== true) {
+            throw new Exception('Error compiling ' + (type === gl.VERTEX_SHADER ? 'vertex' : 'fragment') + '-shader');
         }
 
         return shader;

@@ -1,0 +1,100 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+module Texture = proto {
+
+    radiant : null,
+    canvas  : null,
+    handle  : null,
+    width   : 0,
+    height  : 0,
+
+    constructor: func(object radiant, object source) {
+
+        this.radiant = radiant;
+        this.store(source);
+        this.generate();
+        this.radiant.on('contextrestored', this, this.generate);
+    },
+
+    destructor: func() {
+
+        this.radiant = null;
+        this.canvas = null;
+        this.handle = null;
+    },
+
+    /**
+     * create power of 2 sized canvas from image source
+     *
+     * @param object source
+     */
+    store: func(object source) {
+
+        this.width = source.width;
+        this.height = source.height;
+
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = nextPowerOfTwo(source.width);
+        this.canvas.height = nextPowerOfTwo(source.height);
+        var ctx = this.canvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+    },
+
+    /**
+     * (re)creates texture object from current canvas
+     */
+    generate: func() {
+
+        var gl = this.radiant.gl;
+
+        this.handle = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.handle);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.canvas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        //gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    },
+
+    /**
+     * select this texture for given texture unit
+     */
+    use: func(finite unit = 0) {
+        var gl = this.radiant.gl;
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, this.handle);
+    },
+
+    /**
+     * converts array of given x/y coodinate into texture uv coordinate
+     *
+     * @param finite x
+     * @param finite y
+     * @return Array u, v
+     */
+    getUV: func(finite x, finite y) {
+        return [ x / this.canvas.width, y / this.canvas.height ];
+    },
+};
+
+var nextPowerOfTwo = func(value) {
+    return Math.pow(2, Math.ceil(Math.log(value) / Math.LN2));
+};

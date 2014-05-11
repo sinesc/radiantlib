@@ -1,0 +1,109 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+var Renderer = require('../renderer');
+var Plain = require('../shader/plain');
+var Color = require('../color');
+
+module Text = proto (Renderer) {
+
+    Shader: Plain,
+    textureUnit: 1,
+
+    /**
+     * add a sprite to be drawn
+     *
+     * @param Font font
+     * @param string text
+     * @param finite x
+     * @param finite y
+     * @param finite/Color color
+     * @param finite rotation
+     * @param finite scaleX
+     * @param finite scaleY
+     */
+    write: func(object font, string text, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+
+        this.setupState(font.texture);
+
+        var index = this.size * this.shader.attributeSize;
+        var vertices = this.vertices;
+        var intView = this.vertexIntView;
+        var characters = font.characters;
+        var colorValue = color instanceof Color? color.value : color;
+
+        var offsetX0 = 0;
+        var offsetY0 = 0;
+        var offsetX1, offsetY1, letter, character;
+
+        for (var i = 0; i < text.length; i++) {
+
+            letter = text.substr(i, 1);
+            character = characters[letter];
+
+            offsetX1 = offsetX0 + character.width;
+            offsetY1 = offsetY0 + character.height;
+
+            // bottom right
+
+            vertices[index++] = x;
+            vertices[index++] = y;
+            vertices[index++] = offsetX1;
+            vertices[index++] = offsetY1;
+            vertices[index++] = character.u1;
+            vertices[index++] = character.v1;
+            intView[index++] = colorValue;
+            vertices[index++] = rotation;
+
+            // bottom left
+
+            vertices[index++] = x;
+            vertices[index++] = y;
+            vertices[index++] = offsetX0;
+            vertices[index++] = offsetY1;
+            vertices[index++] = character.u0;
+            vertices[index++] = character.v1;
+            intView[index++] = colorValue;
+            vertices[index++] = rotation;
+
+            // top left
+
+            vertices[index++] = x;
+            vertices[index++] = y;
+            vertices[index++] = offsetX0;
+            vertices[index++] = offsetY0;
+            vertices[index++] = character.u0;
+            vertices[index++] = character.v0;
+            intView[index++] = colorValue;
+            vertices[index++] = rotation;
+
+            // top right
+
+            vertices[index++] = x;
+            vertices[index++] = y;
+            vertices[index++] = offsetX1;
+            vertices[index++] = offsetY0;
+            vertices[index++] = character.u1;
+            vertices[index++] = character.v0;
+            intView[index++] = colorValue;
+            vertices[index++] = rotation;
+
+            offsetX0 += character.width;
+            this.size++;
+        }
+    },
+};

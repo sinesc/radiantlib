@@ -1,6 +1,6 @@
 /*
- * tq2d JavaScript Sidescroller Engine
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+//!note temporary cheap dev-server hackjob. use as dev-server only. examine source at own peril (may cause seizure or worse)
+
 require('astd/prototype').extend();
 
 var http = require('http');
@@ -75,10 +78,12 @@ var server = http.createServer(func(request, response) {
     var postfix = null;
     var header = null;
 
+    //!todo this made sense at some point. 
+    
     if (request.url === '/index.html' || request.url === '/') {
 
         header = [ 200, { 'Content-Type': 'text/html' } ];
-        filename = 'index';
+        filename = './www/index';
         postfix = '.html';
 
     } else {

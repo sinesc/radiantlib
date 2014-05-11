@@ -1,0 +1,198 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+var mat4 import mat4; //!todo
+
+module Renderer = proto {
+
+    radiant: null,
+
+    /**
+     * @var integer maximum number of rectangles that can be drawn in one run
+     */
+    maxSize: 65536 / 4,
+
+    /**
+     * @var integer current number of rectangles
+     */
+    size: 0,
+
+    /**
+     * @var Float32Array vertices, 4 per rectangle
+     */
+    vertices: null,
+    vertexIntView: null,
+    vertexBuffer: null,
+
+    /**
+     * indices into the vertex data, 6 per rectangle (indexes 2 duplicate vertices where the triangles meet)
+     */
+    indices: null,
+    indexBuffer: null,
+
+    /**
+     * the shader and shader-instance used for the rendering
+     */
+    Shader: null,
+    shader: null,
+
+    /**
+     * rendering matrix, normalizes coordinates to width/height/upside down
+     */
+    matrix: null,
+
+    currentBlendMode: null,
+    currentTexture: null,
+
+    textureUnit: 0,
+
+    /**
+     * creates a new renderer
+     *
+     * @param Radiant radiant
+     */
+    constructor: func(object radiant) {
+
+        this.radiant = radiant;
+        this.shader = new this.Shader(radiant);
+
+        // set up vertex-indices for each rectangle
+
+        var numVertices = this.maxSize * 4;
+        this.vertices = new Float32Array(numVertices * this.shader.attributeSize / 4);
+        this.vertexIntView = new Uint32Array(this.vertices.buffer);
+        this.vertexBuffer = null;
+
+        var numIndices = this.maxSize * 6;
+        this.indices = new Uint16Array(numIndices);
+        this.indexBuffer = null;
+
+        // create 6 indices per rectangle (3 per triangle, vertices 0 and 2 are shared between triangles)
+
+        for (var index = 0, vertex = 0; index < numIndices; index += 6/*, vertex += 4*/) {
+            this.indices[index + 0] = vertex + 0;
+            this.indices[index + 1] = vertex + 1;
+            this.indices[index + 2] = vertex + 2;
+            this.indices[index + 3] = vertex + 0;
+            this.indices[index + 4] = vertex + 2;
+            this.indices[index + 5] = vertex + 3;
+            vertex += 4;
+        }
+
+        this.setupMatrix();
+        this.restoreContext();
+        
+        this.shader.uMatrix.value = this.matrix;
+        this.shader.uSampler.value = this.textureUnit;
+        
+        this.radiant.on('contextrestored', this, this.restoreContext);
+        this.radiant.on('resize', this, this.setupMatrix);
+    },
+
+    /**
+     * restore webgl context after context loss
+     */
+    restoreContext: func() {
+
+        var gl = this.radiant.gl;
+
+        this.vertexBuffer = gl.createBuffer();
+        this.indexBuffer = gl.createBuffer();
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.DYNAMIC_DRAW);
+    },
+
+    /**
+     * set up base matrix
+     */
+    setupMatrix: func() {
+
+        this.matrix = mat4.create();
+        mat4.identity(this.matrix);
+        mat4.translate(this.matrix, [ -1.0, 1.0, 0.0 ]);
+        mat4.scale(this.matrix, [ 2.0 / this.radiant.width, -2.0 / this.radiant.height, 1.0 ]);
+    },
+
+    /**
+     * draw previous added rectangles and reset list
+     */
+    draw: func() {
+
+        if (this.size === 0) {
+            return;
+        }
+
+        var gl = this.radiant.gl;
+
+        // select gl buffers, copy array data
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        var view = this.vertices.subarray(0, this.size * this.shader.attributeSize);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+
+        // bind texture
+
+        this.currentTexture.use(this.textureUnit);
+
+        // assign uniforms and attributes
+
+        this.radiant.sm.use(this.shader);
+
+        // draw 2 triangles = 6 indices / 4 unique vertices per rectangle
+
+        gl.drawElements(gl.TRIANGLES, this.size * 6, gl.UNSIGNED_SHORT, 0);
+
+        this.size = 0;
+    },
+
+    /**
+     * set up drawing state for given texture and current blendmode
+     *
+     * @param Texture texure
+     */
+    setupState: func(object texture) {
+
+        if (this.currentTexture === null) {
+            this.currentTexture = texture;
+        }
+
+        if (this.currentBlendMode === null) {
+            this.currentBlendMode = this.radiant.blendMode;
+        }
+
+        if (this.radiant.blendMode !== this.currentBlendMode || texture !== this.currentTexture) {
+
+            // temporarily restore previous blend-mode and texture to draw old buffer before starting new
+
+            var newBlend = this.radiant.blendMode;
+            this.radiant.blendMode = this.currentBlendMode;
+
+            this.draw();
+
+            this.currentBlendMode = newBlend;
+            this.currentTexture = texture;
+            this.radiant.blendMode = newBlend;
+        }
+    },
+
+};
