@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-var mat4 import mat4; //!todo
+var mat4 = require('gl-matrix.js').mat4;
 
 module Renderer = proto {
 
@@ -95,10 +95,10 @@ module Renderer = proto {
 
         this.setupMatrix();
         this.restoreContext();
-        
+
         this.shader.uMatrix.value = this.matrix;
         this.shader.uSampler.value = this.textureUnit;
-        
+
         this.radiant.on('contextrestored', this, this.restoreContext);
         this.radiant.on('resize', this, this.setupMatrix);
     },
@@ -127,8 +127,8 @@ module Renderer = proto {
 
         this.matrix = mat4.create();
         mat4.identity(this.matrix);
-        mat4.translate(this.matrix, [ -1.0, 1.0, 0.0 ]);
-        mat4.scale(this.matrix, [ 2.0 / this.radiant.width, -2.0 / this.radiant.height, 1.0 ]);
+        mat4.translate(this.matrix, this.matrix, [ -1.0, 1.0, 0.0 ]);
+        mat4.scale(this.matrix, this.matrix, [ 2.0 / this.radiant.width, -2.0 / this.radiant.height, 1.0 ]);
     },
 
     /**

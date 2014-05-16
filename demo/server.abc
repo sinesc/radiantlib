@@ -4,14 +4,14 @@
 	"stdin": false,
 	"cache": true,
 	"files": [
-		"server.adria"
+		"demo/server.adria"
 	],
-	"outFile": "server.js",
-	"basePath": "./",
+	"outFile": "demo/server.js",
+	"basePath": "../",
 	"paths": [ "../astdlib/" ],
 	"extension": ".adria",
 	"platform": "node",
-	"headerFile": "./license-header",
+	"headerFile": "license-header",
 	"defines": {},
 	"shellwrap": true,
 	"shellargs": "",

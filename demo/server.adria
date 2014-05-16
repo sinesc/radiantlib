@@ -25,7 +25,7 @@ var fs = require('fs');
 var cp = require('child_process');
 var path = require('path');
 
-var files = [ './test.abc' ];
+var files = [ './demo.abc' ];
 
 var monitor = func(file) {
 
@@ -78,12 +78,12 @@ var server = http.createServer(func(request, response) {
     var postfix = null;
     var header = null;
 
-    //!todo this made sense at some point. 
-    
+    //!todo this made sense at some point.
+
     if (request.url === '/index.html' || request.url === '/') {
 
         header = [ 200, { 'Content-Type': 'text/html' } ];
-        filename = './www/index';
+        filename = '../www/index';
         postfix = '.html';
 
     } else {
@@ -108,7 +108,7 @@ var server = http.createServer(func(request, response) {
             postfix = '.ttf';
         }
 
-        filename = './www/' + request.url.substr(1).replace(postfix, '').replace(/[^a-z0-9\-\_\/\.]/ig, '');
+        filename = '../www/' + request.url.substr(1).replace(postfix, '').replace(/[^a-z0-9\-\_\/\.]/ig, '');
     }
 
     // send response

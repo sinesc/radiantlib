@@ -1,0 +1,41 @@
+{
+  "name": "radiant",
+  "version": "0.1.1",
+  "description": "WebGl 2d rendering engine",
+  "files": [
+    "lib/",
+    "demo/",
+    "www/",
+    "build.abc",
+    "COPYING",
+    "license-header",
+    "README.md"
+  ],
+  "main": "./www/radiant.js",
+  "bin": {
+  },
+  "directories": {
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:sinesc/radiant.git"
+  },
+  "dependencies": {
+    "gl-matrix": ">=2.1.0"
+  },
+  "engines": {
+  },
+  "keywords": [
+    "webgl",
+    "renderer"
+  ],
+  "preferGlobal": false,
+  "author": "Dennis Möhlmann",
+  "license": "GPLv3",
+  "bugs": {
+    "url": "https://github.com/sinesc/radiant/issues"
+  }
+}
