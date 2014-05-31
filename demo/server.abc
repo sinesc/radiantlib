@@ -11,7 +11,7 @@
 	"paths": [ "../astdlib/" ],
 	"extension": ".adria",
 	"platform": "node",
-	"headerFile": "license-header",
+	"headerFile": "./LICENSE",
 	"defines": {},
 	"shellwrap": true,
 	"shellargs": "",

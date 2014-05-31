@@ -50,11 +50,6 @@ module Renderer = proto {
     Shader: null,
     shader: null,
 
-    /**
-     * rendering matrix, normalizes coordinates to width/height/upside down
-     */
-    matrix: null,
-
     currentBlendMode: null,
     currentTexture: null,
 
@@ -93,14 +88,11 @@ module Renderer = proto {
             vertex += 4;
         }
 
-        this.setupMatrix();
         this.restoreContext();
-
-        this.shader.uMatrix.value = this.matrix;
-        this.shader.uSampler.value = this.textureUnit;
+        this.setupUniforms();
 
         this.radiant.on('contextrestored', this, this.restoreContext);
-        this.radiant.on('resize', this, this.setupMatrix);
+        this.radiant.on('resize', this, this.setupUniforms);
     },
 
     /**
@@ -123,12 +115,15 @@ module Renderer = proto {
     /**
      * set up base matrix
      */
-    setupMatrix: func() {
+    setupUniforms: func() {
 
-        this.matrix = mat4.create();
-        mat4.identity(this.matrix);
-        mat4.translate(this.matrix, this.matrix, [ -1.0, 1.0, 0.0 ]);
-        mat4.scale(this.matrix, this.matrix, [ 2.0 / this.radiant.width, -2.0 / this.radiant.height, 1.0 ]);
+        var matrix = mat4.create();
+        mat4.identity(matrix);
+        mat4.translate(matrix, matrix, [ -1.0, 1.0, 0.0 ]);
+        mat4.scale(matrix, matrix, [ 2.0 / this.radiant.width, -2.0 / this.radiant.height, 1.0 ]);
+
+        this.shader.uMatrix.value = matrix;
+        this.shader.uSampler.value = this.textureUnit;
     },
 
     /**

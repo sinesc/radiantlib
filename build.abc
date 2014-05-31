@@ -7,11 +7,11 @@
         "radiant.adria"
     ],
     "outFile": "../www/radiant.js",
-    "basePath": "./lib/",
+    "basePath": "./radiant/",
     "paths": [ "../../astdlib/" ],
     "extension": ".adria",
     "platform": "web",
-    "headerFile": "../license-header",
+    "headerFile": "../LICENSE",
     "defines": {},
     "shellwrap": false,
     "shellargs": "",

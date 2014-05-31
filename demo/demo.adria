@@ -1,5 +1,5 @@
 
-var Radiant = require('radiant');
+var Radiant = require('radiant/radiant');
 var Sprite = Radiant.Sprite;
 var Sprites = Radiant.Sprites;
 var Text = Radiant.Text;

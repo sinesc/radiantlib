@@ -1,47 +1,57 @@
 /*
- * radiant 2d webgl rendering engine
- * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Mini HTTP Development-Server
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Copyright (c) 2014 Dennis Möhlmann
+ * Licensed under the MIT license.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-//!note temporary cheap dev-server hackjob. use as dev-server only. examine source at own peril (may cause seizure or worse)
-
-require('astd/prototype').extend();
-
 var http = require('http');
 var fs = require('fs');
 var cp = require('child_process');
 var path = require('path');
 
-var files = [ './demo.abc' ];
+// server configuration
 
-var monitor = func(file) {
+var listenPort = 80;
+var documentRoot = '../www/';
+var monitoredFiles = [ './demo.abc' ];
+
+var contentTypes = {
+    'html'  : 'text/html',
+    'js'    : 'application/javascript',
+    'png'   : 'image/png',
+    'jpg'   : 'image/jpg',
+    'gif'   : 'image/gif',
+    'ogg'   : 'audio/ogg',
+    'ttf'   : 'application/x-font-ttf',
+};
+
+// compile (and possibly monitor) project files
+
+var compile = func(file) {
 
     console.log('[server] monitoring ' + file);
 
     var child = cp.execFile(
         'adria',
         [ '-c', path.basename(file) ],
-        { cwd: path.dirname(file) }/*,
-        func(error, stdout, stderr) {
-            if (error instanceof Error) {
-                console.log('[' + file + '] ' + stderr.replace(/\n$/, ''));
-            } else {
-                console.log('[' + file + '] exited.');
-            }
-        }*/
+        { cwd: path.dirname(file) }
     );
 
     var prefixMessage = func(message) {
@@ -61,67 +71,46 @@ var monitor = func(file) {
     });
 };
 
-for (var _, file in files) {
-    monitor(file);
+for (var _, file in monitoredFiles) {
+    compile(file);
 }
 
 // create server
 
-var errorResponse = func(response, code, message) {
-    response.writeHead(code, { 'Content-Type': 'text/plain' });
-    response.end(message);
-};
+documentRoot = path.resolve(documentRoot);
 
 var server = http.createServer(func(request, response) {
 
     var filename = null;
-    var postfix = null;
-    var header = null;
-
-    //!todo this made sense at some point.
+    var extension = null;
 
     if (request.url === '/index.html' || request.url === '/') {
 
-        header = [ 200, { 'Content-Type': 'text/html' } ];
-        filename = '../www/index';
-        postfix = '.html';
+        filename = documentRoot + '/index.html';
+        extension = 'html';
 
     } else {
 
-        if (request.url.hasPostfix('.js')) {
-            header = [ 200, { 'Content-Type': 'application/javascript' } ];
-            postfix = '.js';
-        } else if (request.url.hasPostfix('.png')) {
-            header = [ 200, { 'Content-Type': 'image/png' } ];
-            postfix = '.png';
-        } else if (request.url.hasPostfix('.jpg')) {
-            header = [ 200, { 'Content-Type': 'image/jpg' } ];
-            postfix = '.jpg';
-        } else if (request.url.hasPostfix('.gif')) {
-            header = [ 200, { 'Content-Type': 'image/gif' } ];
-            postfix = '.gif';
-        } else if (request.url.hasPostfix('.ogg')) {
-            header = [ 200, { 'Content-Type': 'audio/ogg' } ];
-            postfix = '.ogg';
-        } else if (request.url.hasPostfix('.ttf')) {
-            header = [ 200, { 'Content-Type': 'application/x-font-ttf' } ];
-            postfix = '.ttf';
-        }
-
-        filename = '../www/' + request.url.substr(1).replace(postfix, '').replace(/[^a-z0-9\-\_\/\.]/ig, '');
+        var dot = request.url.lastIndexOf('.');
+        extension = dot > -1 ? request.url.slice(dot +1) : null;
+        filename = documentRoot + request.url;
     }
+
+    // verify that file is located inside document root
+
+    var isValid = filename.slice(0, documentRoot.length +1) === (documentRoot + '/');
 
     // send response
 
-    if (postfix !== null && filename !== null) {
+    if (isValid && extension !== null && contentTypes.hasOwnProperty(extension)) {
 
-        fs.readFile(filename + postfix, func(err, data) {
+        fs.readFile(filename, func(err, data) {
             if (err !== null) {
-                console.log('[server] 404 ' + request.url + ' => ' + filename + postfix);
-                errorResponse(response, 404, 'not found');
+                console.log('[server] 404 ' + request.url + ' => ' + filename);
+                response.writeHead(404, { 'Content-Type': 'text/plain' });
+                response.end('HTTP 404 Not Found');
             } else {
-                //console.log('[server] 200 ' + request.url + ' => ' + filename + postfix);
-                response.writeHead.apply(response, header);
+                response.writeHead(200, { 'Content-Type': contentTypes[extension] });
                 response.end(data);
             }
         });
@@ -129,11 +118,11 @@ var server = http.createServer(func(request, response) {
     } else {
 
         console.log('[server] 404 ' + request.url + ' => unmapped');
-        errorResponse(response, 404, 'not found');
+        response.writeHead(404, { 'Content-Type': 'text/plain' });
+        response.end('HTTP 404 Not Found');
     }
 });
 
-server.listen(80, func() {
-
-    console.log('[server] Listening on port 80');
+server.listen(listenPort, func() {
+    console.log('[server] Listening on port ' + listenPort);
 });
