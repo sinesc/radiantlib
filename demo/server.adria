@@ -29,7 +29,7 @@ var path = require('path');
 // server configuration
 
 var listenPort = 80;
-var documentRoot = '../www/';
+var documentRoot = './www/';
 var monitoredFiles = [ './demo.abc' ];
 
 var contentTypes = {
@@ -98,6 +98,7 @@ var server = http.createServer(func(request, response) {
 
     // verify that file is located inside document root
 
+    filename = path.resolve(filename);
     var isValid = filename.slice(0, documentRoot.length +1) === (documentRoot + '/');
 
     // send response

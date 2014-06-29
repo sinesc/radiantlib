@@ -34,7 +34,7 @@
   ],
   "preferGlobal": false,
   "author": "Dennis Möhlmann",
-  "license": "GPLv3",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/sinesc/radiant/issues"
   }

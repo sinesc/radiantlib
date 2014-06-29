@@ -6,7 +6,7 @@
     "files": [
         "demo/demo.adria"
     ],
-    "outFile": "www/radiant-demo.js",
+    "outFile": "demo/www/radiant-demo.js",
     "basePath": "../",
     "paths": [ "../astdlib/", "./" ],
     "extension": ".adria",
