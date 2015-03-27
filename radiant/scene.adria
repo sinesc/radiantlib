@@ -20,8 +20,188 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var Color = require('./color');
+var Text = require('./renderer/text');
+var Sprites = require('./renderer/sprites');
+
+var PoolItem = proto {
+    order: 0,
+    blendMode: null,
+    sprite: null,
+    frameId: 0,
+    x: 0,
+    y: 0,
+    color: 0,
+    rotation: 0.0,
+    scaleX: 0.0,
+    scaleY: 0.0,
+};
+
 module Scene = proto {
 
+    protected radiant: null,
 
-    //!todo
+    public text: null,
+    public sprites: null,
+
+    protected drawPool: null,
+    protected drawId: 0,
+
+    /**
+     * increased for each item to draw
+     */
+    protected debugDrawCount: 0,
+
+    /**
+     * creates a new scene
+     *
+     * @param Radiant radiant
+     * @param finite poolSize
+     */
+    public constructor: func(object radiant, finite poolSize = 5000) {
+
+        this.radiant = radiant;
+        this.text = new Text(this.radiant);
+        this.sprites = new Sprites(this.radiant);
+
+        this.drawPool = [ ];
+
+        for (var i = 0; i < poolSize; i++) {
+            this.drawPool[i] = new PoolItem();
+        }
+    },
+
+    public ORDER_TEXTURE: 6000,
+    public ORDER_BLENDMODE: 7 * Scene::ORDER_TEXTURE,
+    public ORDER_LAYER: 10 * Scene::ORDER_BLENDMODE,
+
+    public addSprite: func(finite layer, object blendMode, object sprite, finite frameId, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+
+        if (sprite.ready !== true) {
+            return;
+        }
+
+        // grab a pre-created array from the pool and fill it with the sprite parameters
+
+        var drawId = this.drawId++;
+        var poolItem = this.drawPool[drawId];
+        var textureId = sprite.texture.id;
+        var order = layer * this.ORDER_LAYER + blendMode.order * this.ORDER_BLENDMODE + textureId * this.ORDER_TEXTURE + drawId;
+
+        poolItem.order      = order | 0;
+        poolItem.blendMode  = blendMode;
+        poolItem.sprite     = sprite;
+        poolItem.frameId    = frameId | 0;
+        poolItem.x          = x | 0;
+        poolItem.y          = y | 0;
+        poolItem.color      = (typeof color === 'number' ? color : color.value) | 0;
+        poolItem.rotation   = rotation;
+        poolItem.scaleX     = scaleX;
+        poolItem.scaleY     = scaleY;
+
+        this.drawPool[drawId] = poolItem;
+        this.debugDrawCount++;
+    },
+
+    protected sortSprites: func() {
+
+        flashSort(this.drawPool, this.drawId);
+    },
+
+    public draw: func() {
+
+        var radiant = this.radiant;
+        var drawPool = this.drawPool;
+        var drawId = this.drawId;
+        var originalBlendMode = radiant.blendMode;
+        var currentBlendMode = originalBlendMode;
+
+        this.sortSprites();
+
+        for (var i = 0; i < drawId; ++i) {
+
+            var arg = drawPool[i];
+
+            if (arg.blendMode !== currentBlendMode) {
+                radiant.blendMode = arg.blendMode;
+                currentBlendMode = arg.blendMode;
+            }
+
+            this.sprites.add(arg.sprite, arg.frameId, arg.x, arg.y, arg.color, arg.rotation, arg.scaleX, arg.scaleY);
+        }
+
+        this.sprites.draw();
+        this.drawId = 0;
+        radiant.blendMode = originalBlendMode;
+    },
 };
+
+func flashSort( a, n ) {
+
+    var i = 0, j = 0, k = 0, t;
+    var m = ~~( n * 0.125 );
+    var a_nmin = a[ 0 ];
+    var nmax = 0;
+    var nmove = 0;
+
+    var l = new Array(m);
+    for ( i = 0; i < m; i++ ) {
+        l[ i ] = 0;
+    }
+
+    for ( i = 1; i < n; ++i ) {
+        var a_i = a[ i ];
+        if ( a_i.order < a_nmin.order ) { a_nmin = a_i; }
+        if ( a_i.order > a[ nmax ].order ) { nmax = i; }
+    }
+
+    var a_nmax = a[ nmax ];
+    if ( a_nmin === a_nmax) { return a; }
+    var c1 = ( m - 1 ) / ( a_nmax.order - a_nmin.order );
+
+    for ( i = 0; i < n; ++i ) {
+        ++l[ ~~( c1 * ( a[ i ].order - a_nmin.order ) ) ];
+    }
+
+    for ( k = 1; k < m; ++k ) {
+        l[ k ] += l[ k - 1 ];
+    }
+
+    var hold = a_nmax;
+    a[ nmax ] = a[ 0 ];
+    a[ 0 ] = hold;
+
+    var flash;
+    j = 0;
+    k = m - 1;
+    i = n - 1;
+
+    while ( nmove < i ) {
+        while ( j > ( l[ k ] - 1 ) ) {
+            k = ~~( c1 * ( a[ ++j ].order - a_nmin.order ) );
+        }
+        // line below added 07/03/2013, ES
+        if (k < 0) { break; }
+
+        flash = a[ j ];
+
+        while ( j !== l[ k ] ) {
+            k = ~~( c1 * ( flash.order - a_nmin.order ) );
+            hold = a[ t = --l[ k ] ];
+            a[ t ] = flash;
+            flash = hold;
+            ++nmove;
+        }
+    }
+
+    for( j = 1; j < n; ++j ) {
+        hold = a[ j ];
+        i = j - 1;
+        while( i >= 0 && a[i].order > hold.order ) {
+            a[ i + 1 ] = a[ i-- ];
+        }
+        a[ i + 1 ] = hold;
+    }
+
+    return a;
+}
