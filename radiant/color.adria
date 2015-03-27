@@ -28,7 +28,13 @@ var rPos = 0, gPos = 8, bPos = 16, aPos = 24;
 
 (func() {
     var buffer = new ArrayBuffer(2);
+
+    // store 256 in little endian format, then retrieve value in native format and compare against 256
+
     new DataView(buffer).setInt16(0, 256, true);
+
+    // result does not equal 256: native format is not little endian, convert byte positions to big endian
+
     if (new Int16Array(buffer)[0] !== 256) {
         rPos = 24 - rPos;
         gPos = 24 - gPos;
@@ -52,6 +58,7 @@ var aFilter = ~aSelect;
 module Color = proto {
 
     value: 0,
+
     //!todo premultiplication flag
 
     /**
@@ -63,13 +70,12 @@ module Color = proto {
      * @param finite a
      */
     constructor: func([ finite r = 255, finite g = 255, finite b = 255 ], [ finite a = 255 ]) {
-
-        this.r = r;
-        this.g = g;
-        this.b = b;
-        this.a = a;
+        this.value = r << rPos | g << gPos | b << bPos | a << aPos;
     },
 
+    /**
+     * color red value ranging from 0-255
+     */
     r: prop {
         set: func(color) {
             this.value = (this.value & rFilter) | (color << rPos);
@@ -79,6 +85,9 @@ module Color = proto {
         },
     },
 
+    /**
+     * color green value ranging from 0-255
+     */
     g: prop {
         set: func(color) {
             this.value = (this.value & gFilter) | (color << gPos);
@@ -88,6 +97,9 @@ module Color = proto {
         },
     },
 
+    /**
+     * color blue value ranging from 0-255
+     */
     b: prop {
         set: func(color) {
             this.value = (this.value & bFilter) | (color << bPos);
@@ -97,6 +109,9 @@ module Color = proto {
         },
     },
 
+    /**
+     * alpha value ranging from 0-255
+     */
     a: prop {
         set: func(color) {
             this.value = (this.value & aFilter) | (color << aPos);
@@ -106,14 +121,37 @@ module Color = proto {
         },
     },
 
+    /**
+     * return CSS rgba representation of current color value
+     *
+     * @return string
+     */
     toString: func() {
         return 'rgba(' + this.r + ',' + this.g + ',' + this.b + ',' + (this.a / 255).toFixed(3) + ')';
     },
 
+    /**
+     * return integer representation of current color value
+     *
+     * @return integer
+     */
+    toInteger: func() {
+        return this.value;
+    },
+
+    /**
+     * return integer representation of current color value and given alpha value
+     *
+     * @param finite alpha a
+     * @return integer
+     */
+    toAlphaModifiedInteger: func(finite alpha) {
+        return (this.value & aFilter) | (alpha << aPos);
+    },
 };
 
 /*
- * constructor methods returning integer representation of given colors
+ * constructor methods returning integer representation of given colors (range 0-255)
  */
 
 export rgb = func(finite r, finite g, finite b) {
@@ -132,6 +170,39 @@ export alphaPM = func(finite a) {
     return a << rPos | a << gPos | a << bPos | a << aPos;
 };
 
+/*
+ * constructor methods returning integer representation of given colors (range 0.0-1.0)
+ */
+
+export rgb1 = func(finite r, finite g, finite b) {
+    return (r*255) << rPos | (g*255) << gPos | (b*255) << bPos | 255 << aPos;
+};
+
+export rgba1 = func(finite r, finite g, finite b, finite a) {
+    return (r*255) << rPos | (g*255) << gPos | (b*255) << bPos | (a*255) << aPos;
+};
+
+export alpha1 = func(finite a) {
+    return 255 << rPos | 255 << gPos | 255 << bPos | (a*255) << aPos;
+};
+
+export alphaPM1 = func(finite a) {
+    a*=255;
+    return a << rPos | a << gPos | a << bPos | a << aPos;
+};
+
+/**
+ * creates new color instance from integer
+ *
+ * @param integer 32 bit color integer
+ */
+export fromInteger = func(finite value) {
+
+    return new Color((value & rSelect) >>> rPos,
+                     (value & gSelect) >>> gPos,
+                     (value & bSelect) >>> bPos,
+                     (value & aSelect) >>> aPos);
+};
 
 /*
  * some pre-built colors

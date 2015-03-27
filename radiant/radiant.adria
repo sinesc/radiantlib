@@ -30,6 +30,18 @@ export Sprites = require('./renderer/sprites');
 export Font = require('./font');
 export Text = require('./renderer/text');
 export Color = require('./color');
+export Scene = require('./scene');
+
+export BlendMode = proto {
+    public source      : GL.ONE,
+    public destination : GL.ZERO,
+    public order       : 0,
+    public constructor: func(finite source, finite destination, finite order = 0) {
+        this.source = source;
+        this.destination = destination;
+        this.order = order;
+    },
+};
 
 /**
  * radiant 2d context
@@ -40,30 +52,36 @@ export Color = require('./color');
  */
 module Radiant = proto (Listenable) {
 
-    blendModes: {
-        COPY    : [ GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_ALPHA ],
-        NO_ALPHA: [ GL.ONE,                 GL.ZERO ],
-        LIGHTEN : [ GL.SRC_ALPHA,           GL.ONE ],
-        OVERLAY : [ GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_COLOR ],
-        OUTLINE : [ GL.ONE_MINUS_SRC_ALPHA, GL.ONE ],
-        EDGES   : [ GL.DST_ALPHA,           GL.ONE_MINUS_SRC_ALPHA ],
-        MASK    : [ GL.CONSTANT_COLOR,      GL.ONE_MINUS_SRC_ALPHA ],
+    public BLENDMODE: {
+        COPY    : new BlendMode(GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_ALPHA, 4),
+        NO_ALPHA: new BlendMode(GL.ONE,                 GL.ZERO,                0),
+        LIGHTEN : new BlendMode(GL.SRC_ALPHA,           GL.ONE,                 5),
+        OVERLAY : new BlendMode(GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_COLOR, 6),
+        OUTLINE : new BlendMode(GL.ONE_MINUS_SRC_ALPHA, GL.ONE,                 3),
+        EDGES   : new BlendMode(GL.DST_ALPHA,           GL.ONE_MINUS_SRC_ALPHA, 2),
+        MASK    : new BlendMode(GL.CONSTANT_COLOR,      GL.ONE_MINUS_SRC_ALPHA, 1),
     },
 
-    canvas  : null,
-    sm      : null,
-    gl      : null,
+    public canvas   : null,
+    public gl       : null,
+
+    protected sm    : null,
+
+    protected clearR: 0.0,
+    protected clearG: 0.0,
+    protected clearB: 0.0,
+    protected clearA: 1.0,
 
     /**
      * construct new radiant context
      *
      * @param finite width
      * @param finite height
-     * @param boolean transparent
+     * @param boolean transparent create transparent gl context
      * @param boolean antialiasing
      * @param HTMLCanvasElement canvas
      */
-    constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, canvas = null) {
+    public constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, canvas = null) {
 
         this.canvas = canvas !== null ? canvas : document.createElement('canvas');
 
@@ -101,18 +119,42 @@ module Radiant = proto (Listenable) {
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
 
-        this.blendMode = this.blendModes.COPY;
+        this.blendMode = this.BLENDMODE.COPY;
         this.sm = new ShaderManager(this);
     },
 
     /**
-     * get/set blendmode (@see Radiant::blendModes)
+     * sets the scenes clear color
+     *
+     * @param Color/integer color
+     */
+    public clearColor: func(color = Color.BLACK) {
+
+        var tmp = color instanceof Color ? color : Color.fromInteger(color);
+        this.clearR = tmp.r / 256;
+        this.clearG = tmp.g / 256;
+        this.clearB = tmp.b / 256;
+        this.clearA = tmp.a / 256;
+    },
+
+    /**
+     * clears the scene using the current clear color
+     */
+    public clear: func() {
+
+        this.gl.clearColor(this.clearR, this.clearG, this.clearB, this.clearA);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    },
+
+
+    /**
+     * get/set blendmode (@see Radiant::BLENDMODE)
      *
      * @param Array mode
      */
     blendMode: prop {
-        set: func(Array mode) {
-            this.gl.blendFunc(mode[0], mode[1]);
+        set: func(BlendMode mode) {
+            this.gl.blendFunc(mode.source, mode.destination);
             storage = mode;
         },
         get: func() {

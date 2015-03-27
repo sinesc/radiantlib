@@ -60,7 +60,7 @@ sprite2.on('load', func() {
     setInterval(func() {
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        radiant.blendMode = radiant.blendModes.OUTLINE;
+        radiant.blendMode = radiant.BLENDMODE.OUTLINE;
 
         var numBg = 0;
 
@@ -74,15 +74,15 @@ sprite2.on('load', func() {
             }
         }
 
-        radiant.blendMode = radiant.blendModes.COPY;
+        radiant.blendMode = radiant.BLENDMODE.COPY;
         sprites.add(sprite, Math.floor(frame), 200, 200, Color.rgb(128, 255, 128), angle, (Math.cos(angle*4) + 1)*4);
 
-        radiant.blendMode = radiant.blendModes.OUTLINE;
+        radiant.blendMode = radiant.BLENDMODE.OUTLINE;
         sprites.add(sprite2, Math.floor(frame), 400, 400, Color.alpha(255), angle, (Math.sin(angle*4) + 1)*4);
         sprites.draw();
 
         if (font.ready) {
-            radiant.blendMode = radiant.blendModes.COPY;
+            radiant.blendMode = radiant.BLENDMODE.COPY;
             text.write(font, 'FPS: ' + fps + ' BG Sprites: ' + numBg, 100, 100, Color.RED, angle);
             text.draw();
         }
