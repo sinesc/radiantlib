@@ -60,12 +60,17 @@ module Sprite = proto (Listenable) {
     /**
      * @var integer x anchor position
      */
-    anchorX: 0,
+    anchorX: 0.0,
 
     /**
      * @var integer y anchor position
      */
-    anchorY: 0,
+    anchorY: 0.0,
+
+    /**
+     * @var integer numFrames number of frames in sprite
+     */
+    numFrames: 0,
 
     /**
      * construct sprite from filename or parameter object
@@ -80,6 +85,14 @@ module Sprite = proto (Listenable) {
         if (typeof params === 'string') {
             params = new Parameter(params);
         }
+
+        // set properties from params
+
+        this.width = params.width;
+        this.height = params.height;
+        this.anchorU = params.anchorU;
+        this.anchorV = params.anchorV;
+        this.numFrames = params.count;
 
         // load image
 
@@ -140,11 +153,6 @@ module Sprite = proto (Listenable) {
         }
 
         // compute frames
-
-        this.width = params.width;
-        this.height = params.height;
-        this.anchorU = params.anchorU;
-        this.anchorV = params.anchorV;
 
         for (var id = params.start, end = params.start + params.count; id < end; id++) {
             this.frames.push(getFrame(layout, this.texture, params.width, params.height, id));
