@@ -22,7 +22,6 @@
  */
 var Renderer = require('../renderer');
 var Plain = require('../shader/plain');
-var Color = require('../color');
 
 module Sprites = proto (Renderer) {
 
@@ -35,12 +34,12 @@ module Sprites = proto (Renderer) {
      * @param integer frameId
      * @param finite x
      * @param finite y
-     * @param finite/Color color
+     * @param finite color
      * @param finite rotation
      * @param finite scaleX
      * @param finite scaleY
      */
-    add: func(object sprite, finite frameId, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+    add: func(object sprite, finite frameId, finite x, finite y, finite color, finite rotation, finite scaleX, finite scaleY) {
 
         this.setupState(sprite.texture);
 
@@ -48,7 +47,6 @@ module Sprites = proto (Renderer) {
         var vertices = this.vertices;
         var intView = this.vertexIntView;
         var frame = sprite.frames[frameId];
-        var colorValue = color instanceof Color? color.value : color;
 
         // corner positions relative to x/y
 
@@ -65,7 +63,7 @@ module Sprites = proto (Renderer) {
         vertices[index++] = offsetY1;
         vertices[index++] = frame.u1;
         vertices[index++] = frame.v1;
-        intView[index++] = colorValue;
+        intView[index++] = color;
         vertices[index++] = rotation;
 
         // bottom left
@@ -76,7 +74,7 @@ module Sprites = proto (Renderer) {
         vertices[index++] = offsetY1;
         vertices[index++] = frame.u0;
         vertices[index++] = frame.v1;
-        intView[index++] = colorValue;
+        intView[index++] = color;
         vertices[index++] = rotation;
 
         // top left
@@ -87,7 +85,7 @@ module Sprites = proto (Renderer) {
         vertices[index++] = offsetY0;
         vertices[index++] = frame.u0;
         vertices[index++] = frame.v0;
-        intView[index++] = colorValue;
+        intView[index++] = color;
         vertices[index++] = rotation;
 
         // top right
@@ -98,7 +96,7 @@ module Sprites = proto (Renderer) {
         vertices[index++] = offsetY0;
         vertices[index++] = frame.u1;
         vertices[index++] = frame.v0;
-        intView[index++] = colorValue;
+        intView[index++] = color;
         vertices[index++] = rotation;
 
         this.size++;
