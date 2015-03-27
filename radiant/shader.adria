@@ -69,12 +69,13 @@ module Shader = proto {
     /**
      * destroy shader and release resources
      */
-    destructor: func() {
+    destroy: func() {
 
+        this.radiant.off('contextrestored', this, this.generate);
         this.radiant = null;
         this.attributes = null;
         this.uniforms = null;
-        this.radiant.gl.deleteProgram(this.program);
+        this.radiant.gl.deleteProgram(this.program);        
     },
 
     /**

@@ -61,6 +61,11 @@ module Renderer = proto {
     textureUnit: 0,
 
     /**
+     * increased for each webgl draw call
+     */
+    debugDrawCount: 0,
+
+    /**
      * creates a new renderer
      *
      * @param Radiant radiant
@@ -98,6 +103,17 @@ module Renderer = proto {
 
         this.radiant.on('contextrestored', this, this.restoreContext);
         this.radiant.on('resize', this, this.setupUniforms);
+    },
+
+    destroy: func() {
+
+        this.radiant.off('contextrestored', this, this.restoreContext);
+        this.radiant.off('resize', this, this.setupUniforms);
+        this.shader.destroy();
+
+        var gl = this.radiant.gl;
+        gl.deleteBuffer(this.vertexBuffer);
+        gl.deleteBuffer(this.indexBuffer);
     },
 
     /**
@@ -163,6 +179,7 @@ module Renderer = proto {
         gl.drawElements(gl.TRIANGLES, this.size * 6, gl.UNSIGNED_SHORT, 0);
 
         this.size = 0;
+        this.debugDrawCount++;
     },
 
     /**

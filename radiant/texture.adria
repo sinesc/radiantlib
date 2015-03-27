@@ -20,24 +20,30 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var uniqueId = 0;
+
 module Texture = proto {
 
-    radiant : null,
-    canvas  : null,
-    handle  : null,
-    width   : 0,
-    height  : 0,
+    public id       : 0,
+    public radiant  : null,
+    public canvas   : null,
+    public handle   : null,
+    public width    : 0,
+    public height   : 0,
 
     constructor: func(object radiant, object source) {
 
         this.radiant = radiant;
+        this.id = uniqueId++;
         this.store(source);
         this.generate();
         this.radiant.on('contextrestored', this, this.generate);
     },
 
-    destructor: func() {
+    destroy: func() {
 
+        this.radiant.off('contextrestored', this, this.generate);
+        this.radiant.gl.deleteTexture(this.handle);
         this.radiant = null;
         this.canvas = null;
         this.handle = null;
