@@ -36,7 +36,7 @@ module Text = proto (Renderer) {
      * @param string text
      * @param finite x
      * @param finite y
-     * @param finite/Color color
+     * @param finite color
      * @param finite rotation
      * @param finite scaleX
      * @param finite scaleY
@@ -49,7 +49,7 @@ module Text = proto (Renderer) {
         var vertices = this.vertices;
         var intView = this.vertexIntView;
         var characters = font.characters;
-        var colorValue = color instanceof Color? color.value : color;
+        var colorValue = typeof color === 'number' ? color : color.value;
 
         var offsetX0 = 0;
         var offsetY0 = 0;

@@ -30,14 +30,14 @@ var Texture = require('./texture');
  */
 module Font = proto (Listenable) {
 
-    characterSet: '^1234567890ß´°!"§$%&/()=?`qwertzuiopü+QWERTZUIOPÜ*asdfghjklöä#ASDFGHJKLÖÄ\'<yxcvbnm,.->YXCVBNM;:_ ²{[]}\\@€~|µ',
+    protected characterSet: '^1234567890ß´°!"§$%&/()=?`qwertzuiopü+QWERTZUIOPÜ*asdfghjklöä#ASDFGHJKLÖÄ\'<yxcvbnm,.->YXCVBNM;:_ ²{[]}\\@€~|µ',
 
-    radiant     : null,
-    characters  : null,
-    name        : '',
-    texture     : null,
+    protected radiant     : null,
+    protected characters  : null,
+    protected name        : '',
+    protected texture     : null,
 
-    constructor: func(object radiant, string? name = null) {
+    public constructor: func(object radiant, string? name = null) {
 
         this.radiant = radiant;
 
@@ -46,20 +46,21 @@ module Font = proto (Listenable) {
         }
     },
 
-    ready: prop {
+    public ready: prop {
         get: func() {
             return this.characters !== null;
         }
     },
 
-    load: func(string name) {
+    public load: func(string name) {
 
         var ctx = document.createElement('canvas').getContext('2d');
-        document.body.appendChild(ctx.canvas);
+        this.characters = null;
+        this.name = '';
         this.loadFont(name, ctx, this.scanFont);
     },
 
-    loadFont: func(string name, object ctx, func callback) {
+    protected loadFont: func(string name, object ctx, func callback) {
 
         var sizeMatch = /([0-9]+(px|pt|em))/;
         var testString = '^,Wmuli178 _*~#';
@@ -85,7 +86,7 @@ module Font = proto (Listenable) {
         }, 10);
     },
 
-    scanFont: func(string name, object ctx) {
+    protected scanFont: func(string name, object ctx) {
 
         var charSet = this.characterSet;
         var chars = Object.create(null);
@@ -123,7 +124,7 @@ module Font = proto (Listenable) {
         var uv = null;
 
         if (this.texture !== null) {
-            this.texture.destructor();
+            this.texture.destroy();
         }
 
         this.texture = new Texture(this.radiant, canvas);
@@ -140,6 +141,7 @@ module Font = proto (Listenable) {
         // done
 
         this.characters = chars;
+        this.name = name;
         this.trigger('load');
     },
 };
