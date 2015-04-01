@@ -131,27 +131,22 @@ module Color = proto {
     },
 
     /**
-     * return integer representation of current color value
-     *
-     * @return integer
-     */
-    toInteger: func() {
-        return this.value;
-    },
-
-    /**
-     * return integer representation of current color value and given alpha value
+     * return integer representation of current color value, optionally with modified alpha value
      *
      * @param finite alpha a
      * @return integer
      */
-    toAlphaModifiedInteger: func(finite alpha) {
-        return (this.value & aFilter) | (alpha << aPos);
+    toInteger: func(alpha) {
+        if (typeof alpha === 'undefined') {
+            return this.value;
+        } else {
+            return (this.value & aFilter) | (alpha << aPos);
+        }
     },
 };
 
 /*
- * constructor methods returning integer representation of given colors (range 0-255)
+ * functions returning integer representation of given colors (range 0-255)
  */
 
 export rgb = func(finite r, finite g, finite b) {
@@ -171,7 +166,7 @@ export alphaPM = func(finite a) {
 };
 
 /*
- * constructor methods returning integer representation of given colors (range 0.0-1.0)
+ * functions returning integer representation of given colors (range 0.0-1.0)
  */
 
 export rgb1 = func(finite r, finite g, finite b) {
@@ -204,15 +199,50 @@ export fromInteger = func(finite value) {
                      (value & aSelect) >>> aPos);
 };
 
+/**
+ * creates new color instance from given color temperature value
+ * based on http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+ *
+ * @param finite temperature
+ * @param finite alpha
+ */
+export fromTemperature = func(finite temperature, finite alpha = 255) {
+
+    var value = (temperature / 100) | 0;
+    var red = 0, green = 0, blue = 0;
+
+    if (value <= 66) {
+        red = 255;
+        green = (99.4708025861 * Math.log(value) - 161.1195681661) | 0;
+    } else {
+        red = (329.698727466 * Math.pow(value - 60, -0.1332047592)) | 0;
+        green = (288.1221695283 * Math.pow(value - 60, -0.0755148492)) | 0;
+    }
+
+    if (value >= 66) {
+        blue = 255;
+    } else if (value <= 19) {
+        blue = 0;
+    } else {
+        blue = (138.5177312231 * Math.log(value - 10) - 305.0447927307) | 0;
+    }
+
+    return new Color(Math.max(0, Math.min(255, red)),
+                     Math.max(0, Math.min(255, green)),
+                     Math.max(0, Math.min(255, blue)),
+                     alpha);
+};
+
 /*
  * some pre-built colors
  */
 
-export WHITE = new Color();
-export BLACK = new Color(0, 0, 0);
-export RED = new Color(255, 0, 0);
-export GREEN = new Color(0, 255, 0);
-export BLUE = new Color(0, 0, 255);
-export YELLOW = new Color(255, 255, 0);
-export PURPLE = new Color(255, 0, 255);
-export CYAN = new Color(0, 255, 255);
+export WHITE = rgb(255, 255, 255);
+export BLACK = rgb(0, 0, 0);
+export RED = rgb(255, 0, 0);
+export GREEN = rgb(0, 255, 0);
+export BLUE = rgb(0, 0, 255);
+export YELLOW = rgb(255, 255, 0);
+export ORANGE = rgb(255, 128, 0);
+export PURPLE = rgb(255, 0, 255);
+export CYAN = rgb(0, 255, 255);

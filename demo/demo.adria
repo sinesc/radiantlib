@@ -69,7 +69,7 @@ sprite2.on('load', func() {
                 color.r = x / 1280 * 255;
                 color.g = 255 - y / 600 * 255;
                 color.b = 255 - color.r;
-                sprites.add(sprite, Math.floor(frame), x, y, color, angle, 1);
+                sprites.add(sprite, Math.floor(frame), x, y, color.value, angle, 1);
                 numBg++;
             }
         }
