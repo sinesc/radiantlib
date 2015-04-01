@@ -20,11 +20,11 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+interface Radiant;
+
 var Listenable = require('astd/listenable');
-var ShaderManager = require('./shader_manager');
 var GL = window.WebGLRenderingContext;
 
-interface Radiant;
 export Sprite = require('./sprite');
 export Sprites = require('./renderer/sprites');
 export Font = require('./font');
@@ -72,6 +72,9 @@ module Radiant = proto (Listenable) {
     protected clearB: 0.0,
     protected clearA: 1.0,
 
+    public currentTextures: null,
+    public currentShader: null,
+
     /**
      * construct new radiant context
      *
@@ -83,12 +86,20 @@ module Radiant = proto (Listenable) {
      */
     public constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, canvas = null) {
 
-        this.canvas = canvas !== null ? canvas : document.createElement('canvas');
+        if (canvas !== null) {
+            this.canvas = canvas;
+        } else {
+            this.canvas = document.createElement('canvas');
 
-        // forward events as Listenable events
+            if (transparent !== true) {
+                this.canvas.setAttribute('moz-opaque', '');
+            }
+        }
 
-        this.canvas.addEventListener('webglcontextlost', this.forward('contextlost'), false);
-        this.canvas.addEventListener('webglcontextrestored', this.forward('contextrestored'), false);
+        // handle context loss/restore events
+
+        this.canvas.addEventListener('webglcontextlost', this, false);
+        this.canvas.addEventListener('webglcontextrestored', this, false);
 
         // create webgl context with given options
 
@@ -101,26 +112,42 @@ module Radiant = proto (Listenable) {
         };
 
         try {
-            this.gl = this.canvas.getContext('experimental-webgl', options);
+            this.gl = this.canvas.getContext('webgl', options);
         } catch (e) {
             try {
-                this.gl = this.canvas.getContext('webgl', options);
+                this.gl = this.canvas.getContext('experimental-webgl', options);
             } catch (e) {
                 throw new Exception('Error initializing webgl context');
             }
         }
 
         this.setSize(width, height);
+        this.restoreContext();
+    },
 
-        // enable disable unused/required features
+    public handleEvent: func(event) {
+
+        if (event.type === 'webglcontextlost') {
+            event.preventDefault();
+            this.execute('contextlost');
+        } else if (event.type === 'webglcontextrestored') {
+            this.restoreContext();
+            this.execute('contextrestored');
+        }
+    },
+
+    public restoreContext: func() {
 
         var gl = this.gl;
         gl.enable(gl.BLEND);
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        //gl.clearColor(this.clearR, this.clearG, this.clearB, this.clearA);
 
         this.blendMode = this.BLENDMODE.COPY;
-        this.sm = new ShaderManager(this);
+        this.currentShader = null;
+        this.currentTextures = [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ];
     },
 
     /**

@@ -20,6 +20,9 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var Uniform = require('./uniform');
+var Attribute = require('./attribute');
+
 module Shader = proto {
 
     radiant: null,
@@ -62,8 +65,9 @@ module Shader = proto {
         this.radiant = radiant;
         this.attributes = [];
         this.uniforms = [];
-        this.generate();
-        this.radiant.on('contextrestored', this, this.generate);
+        this.compile();
+        this.register();
+        this.radiant.on('contextrestored', this, this.restoreContext);
     },
 
     /**
@@ -71,11 +75,11 @@ module Shader = proto {
      */
     destroy: func() {
 
-        this.radiant.off('contextrestored', this, this.generate);
+        this.radiant.off('contextrestored', this, this.restoreContext);
         this.radiant = null;
         this.attributes = null;
         this.uniforms = null;
-        this.radiant.gl.deleteProgram(this.program);        
+        this.radiant.gl.deleteProgram(this.program);
     },
 
     /**
@@ -86,21 +90,30 @@ module Shader = proto {
     /**
      * generate shader (compile it, associate uniforms and attributes)
      */
-    generate: func() {
+    restoreContext: func() {
 
         var gl = this.radiant.gl;
+        var attributes = this.attributes;
+        var uniforms = this.uniforms;
 
         this.compile();
         gl.useProgram(this.program);
-        this.register();
 
-        if (this.radiant.sm.activeShader !== null) {
-            gl.useProgram(this.radiant.sm.activeShader.program);
+        for (var i = 0, num = attributes.length; i < num; ++i) {
+            attributes[i].restoreContext();
+        }
+
+        for (var i = 0, num = uniforms.length; i < num; ++i) {
+            uniforms[i].restoreContext();
+        }
+
+        if (this.radiant.currentShader !== null) {
+            gl.useProgram(this.radiant.currentShader.program);
         }
     },
 
     /**
-     * registers an attribute
+     * registers a shader attribute with this wrapper
      *
      * @param string srcName name in shader source
      * @param integer parts
@@ -110,14 +123,8 @@ module Shader = proto {
      */
     registerAttribute: func(string srcName, finite parts, finite type, boolean normalized = false, string propName = srcName) {
 
-        var gl = this.radiant.gl;
-
-        var attribLocation = gl.getAttribLocation(this.program, srcName);
-        gl.enableVertexAttribArray(attribLocation);
-
-        var attribute = new Attribute(attribLocation, parts, type, normalized);
+        var attribute = new Attribute(this, srcName, parts, type, normalized);
         this[propName] = attribute;
-
         this.attributes.push(attribute);
         this.attributeSize += attribute.size;
     },
@@ -127,31 +134,26 @@ module Shader = proto {
      */
     useAttributes: func() {
 
-        var gl = this.radiant.gl;
         var attributes = this.attributes;
         var offset = 0;
+        var size = this.attributeSize;
 
-        for (var i = 0, num = attributes.length; i < num; i++) {
+        for (var i = 0, num = attributes.length; i < num; ++i) {
             var attribute = attributes[i];
-            //gl.enableVertexAttribArray(attribute.location);
-            gl.vertexAttribPointer(attribute.location, attribute.parts, attribute.type, attribute.normalized, this.attributeSize, offset);
-            offset += attribute.size;
+            offset += attribute.use(size, offset);
         }
     },
 
     /**
-     * registers a uniform
+     * registers a shader uniform with this wrapper
      *
      * @param string srcName name in shader source
      * @param string propName name of the object property on this object that will refer to srcName
      */
     registerUniform: func(string srcName, finite parts = 1, boolean isMatrix = false, boolean isFloat = isMatrix, string propName = srcName) {
 
-        var uniformLocation = this.radiant.gl.getUniformLocation(this.program, srcName);
-
-        var uniform = new Uniform(this, uniformLocation, parts, isMatrix, isFloat);
+        var uniform = new Uniform(this, srcName, parts, isMatrix, isFloat);
         this[propName] = uniform;
-
         this.uniforms.push(uniform);
     },
 
@@ -160,16 +162,10 @@ module Shader = proto {
      */
     useUniforms: func() {
 
-        var gl = this.radiant.gl;
         var uniforms = this.uniforms;
 
-        for (var i = 0, num = uniforms.length; i < num; i++) {
-            var uniform = uniforms[i];
-            if (uniform.isMatrix) {
-                gl[uniform.funcName](uniform.location, false, uniform.value);
-            } else {
-                gl[uniform.funcName](uniform.location, uniform.value);
-            }
+        for (var i = 0, num = uniforms.length; i < num; ++i) {
+            uniforms[i].use();
         }
     },
 
@@ -182,6 +178,8 @@ module Shader = proto {
 
         gl.useProgram(this.program);
         this.useAttributes();
+
+        // uniformUpdateRequired is set by individual uniforms
 
         if (this.uniformUpdateRequired) {
             this.useUniforms();
@@ -206,72 +204,6 @@ module Shader = proto {
         }
 
         this.program = shaderProgram;
-    },
-};
-
-var GL = window.WebGLRenderingContext;
-var typeSize = { };
-typeSize[GL.BYTE]             = 1;
-typeSize[GL.UNSIGNED_BYTE]    = 1;
-typeSize[GL.SHORT]            = 2;
-typeSize[GL.UNSIGNED_SHORT]   = 2;
-typeSize[GL.FIXED]            = 4;
-typeSize[GL.FLOAT]            = 4;
-
-export Uniform = proto {
-
-    shader      : null,
-    parts       : 0,
-    isFloat     : true,
-    location    : 0,
-    isMatrix    : false,
-    funcName    : '',
-
-    constructor: func(shader, loc, parts, isMatrix, isFloat) {
-
-        this.shader = shader;
-        this.parts = parts;
-        this.isFloat = isFloat;
-        this.location = loc;
-        this.isMatrix = isMatrix;
-
-        if (isMatrix) {
-            assert(parts >= 2 && parts <= 4);
-            assert(isFloat === true);
-            this.funcName = 'uniformMatrix' + parts + 'fv';
-        } else {
-            assert(parts >= 1 && parts <= 4);
-            this.funcName = 'uniform' + parts + (isFloat ? 'f' : 'i') + (parts > 1 ? 'v' : '');
-        }
-    },
-
-    value: prop {
-        set: func(val) {
-            assert(this.parts === 1 || (this.isFloat && val instanceof Float32Array) || (this.isFloat === false && val instanceof Int32Array));
-            assert(this.parts > 1 || isFinite(val));
-            storage = val;
-            this.shader.uniformUpdateRequired = true;
-        },
-        get: func() {
-            return storage;
-        }
-    },
-};
-
-export Attribute = proto {
-
-    parts       : 0,
-    type        : 0,
-    normalized  : false,
-    location    : 0,
-    size        : 0,
-
-    constructor: func(loc, parts, type, normalized) {
-        this.parts = parts;
-        this.type = type;
-        this.normalized = normalized;
-        this.location = loc;
-        this.size = parts * typeSize[type];
     },
 };
 

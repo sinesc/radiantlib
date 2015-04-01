@@ -172,7 +172,9 @@ module Renderer = proto {
 
         // assign uniforms and attributes
 
-        this.radiant.sm.use(this.shader);
+        if (this.radiant.currentShader !== this.shader) {
+            this.shader.use();
+        }
 
         // draw 2 triangles = 6 indices / 4 unique vertices per rectangle
 
