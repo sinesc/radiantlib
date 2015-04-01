@@ -26,8 +26,10 @@ var Color = require('../color');
 
 module Text = proto (Renderer) {
 
-    Shader: Plain,
-    textureUnit: 1,
+    public Shader: Plain,
+    public textureUnit: 1,
+
+    public tabWidth: 32,
 
     /**
      * add a sprite to be drawn
@@ -53,14 +55,21 @@ module Text = proto (Renderer) {
 
         var offsetX0 = 0;
         var offsetY0 = 0;
-        var offsetX1, offsetY1, letter, character;
+        var offsetX1, offsetY1, letter, character, characterWidth;
 
         for (var i = 0; i < text.length; i++) {
 
             letter = text.substr(i, 1);
-            character = characters[letter];
 
-            offsetX1 = offsetX0 + character.width;
+            if (letter !== '\t') {
+                character = characters[letter];
+                characterWidth = character.width;
+            } else {
+                character = characters[' '];
+                characterWidth = this.tabWidth - (offsetX0 % this.tabWidth);
+            }
+
+            offsetX1 = offsetX0 + characterWidth;
             offsetY1 = offsetY0 + character.height;
 
             // bottom right
@@ -107,7 +116,7 @@ module Text = proto (Renderer) {
             intView[index++] = colorValue;
             vertices[index++] = rotation;
 
-            offsetX0 += character.width;
+            offsetX0 += characterWidth;
             this.size++;
         }
     },
