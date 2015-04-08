@@ -6,12 +6,12 @@
     "files": [
         "radiant.adria"
     ],
-    "outFile": "../www/radiant.js",
-    "basePath": "./radiant/",
-    "paths": [ "../../astdlib/" ],
+    "outFile": "./bin/radiant.js",
+    "basePath": "./",
+    "paths": [ "../astdlib/" ],
     "extension": ".adria",
     "platform": "web",
-    "headerFile": "../LICENSE",
+    "headerFile": "./LICENSE",
     "defines": {},
     "shellwrap": false,
     "shellargs": "",

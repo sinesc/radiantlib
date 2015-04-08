@@ -1,105 +1,90 @@
 /*
  * radiant 2d webgl rendering engine
  * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
- * Licensed under the MIT license.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Licensed under the MIT license, see LICENSE file for details or google it.
  */
+
+// require stuff, alternatively require('radiant') to get everything
+
 var Radiant = require('radiant/radiant');
-var Sprite = Radiant.Sprite;
-var Sprites = Radiant.Sprites;
-var Text = Radiant.Text;
-var Color = Radiant.Color;
-var Font = Radiant.Font;
+var Sprite = require('radiant/sprite');
+var Sprites = require('radiant/renderer/sprites');
+var Text = require('radiant/renderer/text');
+var Color = require('radiant/color');
+var Font = require('radiant/font');
+
+// initialize radiant, two sprites and a font
 
 var radiant = new Radiant(1280, 600);
-document.body.appendChild(radiant.canvas);
-
 var sprite2 = new Sprite(radiant, 'naves_green_64x64x15.png');
 var sprite = new Sprite(radiant, 'mine_green_64x64x15.png');
 var font = new Font(radiant, '20px Tahoma');
 
-font.on('load', func() {
-    console.log('font loaded');
-});
+// set up renderers for sprites and text text as well as a color object to play around with
 
-sprite2.on('load', func() {
+var sprites = new Sprites(radiant);
+var text = new Text(radiant);
+var color = new Color(255, 255, 255, 255);
+var angle = 0, frame = 0;
 
-    var sprites = new Sprites(radiant);
-    var text = new Text(radiant);
+// pretty lame demo, started once sprites/font are loaded (see end of file)
 
-    var gl = radiant.gl;
+func renderFrame() {
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    window.requestAnimationFrame(renderFrame);
 
-    var color = new Color(255, 255, 255, 255);
-    var angle = 0;
-    var frame = 0;
+    // draw some background sprites in varying colors
 
-    sprite.anchorU = 0.5;
-    sprite.anchorV = 0.5;
+    radiant.clear();
 
-    var time = Date.now();
-    var frames = 0, fps = 0;
-
-    setInterval(func() {
-        gl.clear(gl.COLOR_BUFFER_BIT);
-
-        radiant.blendMode = radiant.BLENDMODE.OUTLINE;
-
-        var numBg = 0;
-
-        for (var x = 0; x <= 1280; x += 45) {
-            for (var y = 0; y <= 600; y += 45) {
-                color.r = x / 1280 * 255;
-                color.g = 255 - y / 600 * 255;
-                color.b = 255 - color.r;
-                sprites.add(sprite, Math.floor(frame), x, y, color.value, angle, 1);
-                numBg++;
-            }
+    for (var x = 0; x <= 1280; x += 45) {
+        for (var y = 0; y <= 600; y += 45) {
+            color.r = x / 1280 * 255;
+            color.g = 255 - y / 600 * 255;
+            color.b = 255 - color.r;
+            sprites.add(radiant.BLENDMODE.OUTLINE, sprite, Math.floor(frame), x, y, color.value, angle, 1.0, 1.0);
         }
+    }
 
-        radiant.blendMode = radiant.BLENDMODE.COPY;
-        sprites.add(sprite, Math.floor(frame), 200, 200, Color.rgb(128, 255, 128), angle, (Math.cos(angle*4) + 1)*4);
+    // draw two sprites in the foreground
 
-        radiant.blendMode = radiant.BLENDMODE.OUTLINE;
-        sprites.add(sprite2, Math.floor(frame), 400, 400, Color.alpha(255), angle, (Math.sin(angle*4) + 1)*4);
-        sprites.draw();
+    var cosSize = (Math.cos(angle*4) + 1)*4;
+    var sinSize = (Math.sin(angle*4) + 1)*4;
 
-        if (font.ready) {
-            radiant.blendMode = radiant.BLENDMODE.COPY;
-            text.write(font, 'FPS: ' + fps + ' BG Sprites: ' + numBg, 100, 100, Color.RED, angle);
-            text.draw();
-        }
+    sprites.add(radiant.BLENDMODE.COPY, sprite, Math.floor(frame), 200, 200, Color.rgb(128, 255, 128), angle, cosSize, cosSize);
+    sprites.add(radiant.BLENDMODE.OUTLINE, sprite2, Math.floor(frame), 400, 400, Color.alpha(255), angle, sinSize, sinSize);
+    sprites.draw();
 
-        frame+=0.35;
-        angle+=0.002;
-        if (frame > 14) {
-            frame = 0;
-        }
+    // output and rotate some text
 
-        frames++;
-        var now = Date.now();
-        if (now > time + 1000) {
-            time = now;
-            fps = frames;
-            frames = 0;
-        }
+    text.write(radiant.BLENDMODE.COPY, font, 'some rotating text', 500, 200, Color.RED, angle);
+    text.draw();
 
-    }, 16);
-});
+    // animate sprite frame and angles
+
+    frame += 0.35;
+    angle += 0.002;
+
+    if (frame > 14) {
+        frame = 0;
+    }
+}
+
+// pretty lame load handling to keep it short
+
+var numLoaded = 0;
+
+var checkLoaded = func() {
+    numLoaded++;
+    if (numLoaded === 3) {
+        renderFrame();
+    }
+};
+
+font.once('load', checkLoaded);
+sprite.once('load', checkLoaded);
+sprite2.once('load', checkLoaded);
+
+// attach radiant's canvas to document
+
+document.body.appendChild(radiant.canvas);

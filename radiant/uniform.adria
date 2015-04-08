@@ -53,8 +53,10 @@ module Uniform = proto {
         set: func(val) {
             assert(this.parts === 1 || (this.isFloat && val instanceof Float32Array) || (this.isFloat === false && val instanceof Int32Array));
             assert(this.parts > 1 || isFinite(val));
-            storage = val;
-            this.shader.uniformUpdateRequired = true;
+            storage = val;            
+            if (this.shader.radiant.currentShader === this.shader) {
+                this.use();
+            }
         },
         get: func() {
             assert(this.parts === 1 || (this.isFloat && storage instanceof Float32Array) || (this.isFloat === false && storage instanceof Int32Array));

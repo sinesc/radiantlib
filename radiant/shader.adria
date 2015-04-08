@@ -48,7 +48,7 @@ module Shader = proto {
     /**
      * @var boolean true after a uniform was changed until change was propagated to gl
      */
-    uniformUpdateRequired: false,
+    //uniformUpdateRequired: false,
 
     /**
      * @var finite total attributes size in bytes
@@ -60,12 +60,13 @@ module Shader = proto {
      *
      * @param Radiant radiant
      */
-    constructor: func(radiant) {
+    public constructor: func(radiant) {
 
         this.radiant = radiant;
         this.attributes = [];
         this.uniforms = [];
         this.compile();
+        this.radiant.gl.useProgram(this.program);
         this.register();
         this.radiant.on('contextrestored', this, this.restoreContext);
     },
@@ -73,7 +74,7 @@ module Shader = proto {
     /**
      * destroy shader and release resources
      */
-    destroy: func() {
+    public destroy: func() {
 
         this.radiant.off('contextrestored', this, this.restoreContext);
         this.radiant = null;
@@ -85,12 +86,12 @@ module Shader = proto {
     /**
      * register attributes and uniforms here
      */
-    register: func() { },
+    protected register: func() { },
 
     /**
      * generate shader (compile it, associate uniforms and attributes)
      */
-    restoreContext: func() {
+    public restoreContext: func() {
 
         var gl = this.radiant.gl;
         var attributes = this.attributes;
@@ -106,10 +107,6 @@ module Shader = proto {
         for (var i = 0, num = uniforms.length; i < num; ++i) {
             uniforms[i].restoreContext();
         }
-
-        if (this.radiant.currentShader !== null) {
-            gl.useProgram(this.radiant.currentShader.program);
-        }
     },
 
     /**
@@ -121,7 +118,7 @@ module Shader = proto {
      * @param boolean normalized
      * @param string propName name of the object property on this object that will refer to srcName
      */
-    registerAttribute: func(string srcName, finite parts, finite type, boolean normalized = false, string propName = srcName) {
+    protected registerAttribute: func(string srcName, finite parts, finite type, boolean normalized = false, string propName = srcName) {
 
         var attribute = new Attribute(this, srcName, parts, type, normalized);
         this[propName] = attribute;
@@ -132,16 +129,20 @@ module Shader = proto {
     /**
      * use vertex attribute pointers from this shader
      */
-    useAttributes: func() {
+    protected useAttributes: func() {
 
         var attributes = this.attributes;
         var offset = 0;
         var size = this.attributeSize;
 
+        // select/enable used attributes, disable the rest
+
         for (var i = 0, num = attributes.length; i < num; ++i) {
             var attribute = attributes[i];
             offset += attribute.use(size, offset);
         }
+
+        Attribute::disable(this.radiant, attributes.length);
     },
 
     /**
@@ -150,7 +151,7 @@ module Shader = proto {
      * @param string srcName name in shader source
      * @param string propName name of the object property on this object that will refer to srcName
      */
-    registerUniform: func(string srcName, finite parts = 1, boolean isMatrix = false, boolean isFloat = isMatrix, string propName = srcName) {
+    protected registerUniform: func(string srcName, finite parts = 1, boolean isMatrix = false, boolean isFloat = isMatrix, string propName = srcName) {
 
         var uniform = new Uniform(this, srcName, parts, isMatrix, isFloat);
         this[propName] = uniform;
@@ -160,7 +161,7 @@ module Shader = proto {
     /**
      * set uniforms for this shader
      */
-    useUniforms: func() {
+    protected useUniforms: func() {
 
         var uniforms = this.uniforms;
 
@@ -172,31 +173,35 @@ module Shader = proto {
     /**
      * use this shader programm
      */
-    use: func() {
+    public use: func() {
 
-        var gl = this.radiant.gl;
+        if (this.radiant.currentShader === this) {
+            return;
+        }
 
-        gl.useProgram(this.program);
+        this.radiant.gl.useProgram(this.program);
         this.useAttributes();
 
         // uniformUpdateRequired is set by individual uniforms
 
-        if (this.uniformUpdateRequired) {
+        //if (this.uniformUpdateRequired) {
             this.useUniforms();
-            this.uniformUpdateRequired = false;
-        }
+        //    this.uniformUpdateRequired = false;
+        //}
+
+        this.radiant.currentShader = this;
     },
 
     /**
      * compile vertex and fragment source to program
      */
-    compile: func() {
+    protected compile: func() {
 
         var gl = this.radiant.gl;
 
         var shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, Private->createShader(gl.VERTEX_SHADER, this.vertexSrc));
-        gl.attachShader(shaderProgram, Private->createShader(gl.FRAGMENT_SHADER, this.fragmentSrc));
+        gl.attachShader(shaderProgram, this.createShader(gl.VERTEX_SHADER, this.vertexSrc));
+        gl.attachShader(shaderProgram, this.createShader(gl.FRAGMENT_SHADER, this.fragmentSrc));
         gl.linkProgram(shaderProgram);
 
         if (gl.isContextLost() === false && gl.getProgramParameter(shaderProgram, gl.LINK_STATUS) !== true) {
@@ -205,11 +210,8 @@ module Shader = proto {
 
         this.program = shaderProgram;
     },
-};
 
-var Private = proto {
-
-    createShader: func(finite type, string src) {
+    private createShader: func(finite type, string src) {
 
         var gl = this.radiant.gl;
 
@@ -218,7 +220,7 @@ var Private = proto {
         gl.compileShader(shader);
 
         if (gl.isContextLost() === false && gl.getShaderParameter(shader, gl.COMPILE_STATUS) !== true) {
-            throw new Exception('Error compiling ' + (type === gl.VERTEX_SHADER ? 'vertex' : 'fragment') + '-shader');
+            throw new Exception('Error compiling ' + (type === gl.VERTEX_SHADER ? 'vertex' : 'fragment') + '-shader: ' + gl.getShaderInfoLog(shader));
         }
 
         return shader;

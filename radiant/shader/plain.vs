@@ -10,14 +10,21 @@ attribute float aRotation;
 varying vec2 vTextureCoord;
 varying vec4 vColor;
 
-void main(void) {
+void main() {
+
+    // pass texture/tint to fragment shader
 
     vTextureCoord = aTextureCoord;
     vColor = aColor;
 
+    // compute vertex position
+
     vec2 offset;
-    offset.x = aVertexOffset.x * cos(aRotation) - aVertexOffset.y * sin(aRotation);
-    offset.y = aVertexOffset.x * sin(aRotation) + aVertexOffset.y * cos(aRotation);
+    float sinRotation = sin(aRotation);
+    float cosRotation = cos(aRotation);
+
+    offset.x = aVertexOffset.x * cosRotation - aVertexOffset.y * sinRotation;
+    offset.y = aVertexOffset.x * sinRotation + aVertexOffset.y * cosRotation;
 
     gl_Position = uMatrix * vec4(aPosition + offset, 0.0, 1.0);
 }

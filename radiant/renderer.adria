@@ -24,53 +24,60 @@ var mat4 = require('gl-matrix.js').mat4;
 
 module Renderer = proto {
 
-    radiant: null,
+    public radiant: null,
 
     /**
      * @var integer maximum number of rectangles that can be drawn in one run
      */
-    maxSize: 65536 / 4,
+    public maxSize: 65536 / 4,
 
     /**
      * @var integer current number of rectangles
      */
-    size: 0,
+    public size: 0,
+
+    /**
+     * reset size after draw
+     */
+    protected drawResets: true,
 
     /**
      * @var Float32Array vertices, 4 per rectangle
      */
-    vertices: null,
-    vertexIntView: null,
-    vertexBuffer: null,
+    public vertices: null,
+    public vertexIntView: null,
+    public vertexBuffer: null,
 
     /**
      * indices into the vertex data, 6 per rectangle (indexes 2 duplicate vertices where the triangles meet)
      */
-    indices: null,
-    indexBuffer: null,
+    protected indices: null,
+    protected indexBuffer: null,
 
     /**
-     * the shader and shader-instance used for the rendering
+     * the shader used for the rendering
      */
-    Shader: null,
-    shader: null,
+    protected Shader: null,
 
-    currentBlendMode: null,
-    currentTexture: null,
-
-    textureUnit: 0,
+    /**
+     * current rendersettings
+     */
+    protected shader: null,
+    protected blendMode: null,
+    protected texture: null,
+    protected textureUnit: 0,
 
     /**
      * increased for each webgl draw call
      */
-    debugDrawCount: 0,
+    public debugDrawCount: 0,
 
     /**
      * creates a new renderer
      *
      * @param Radiant radiant
      */
-    constructor: func(object radiant) {
+    public constructor: func(object radiant) {
 
         this.radiant = radiant;
         this.shader = new this.Shader(radiant);
@@ -105,7 +112,7 @@ module Renderer = proto {
         this.radiant.on('resize', this, this.setupUniforms);
     },
 
-    destroy: func() {
+    public destroy: func() {
 
         this.radiant.off('contextrestored', this, this.restoreContext);
         this.radiant.off('resize', this, this.setupUniforms);
@@ -119,7 +126,7 @@ module Renderer = proto {
     /**
      * restore webgl context after context loss
      */
-    restoreContext: func() {
+    public restoreContext: func() {
 
         var gl = this.radiant.gl;
 
@@ -134,9 +141,66 @@ module Renderer = proto {
     },
 
     /**
+     * draw previous added rectangles and reset list
+     */
+    public draw: func() {
+
+        if (this.size === 0) {
+            return false;
+        }
+
+        // select gl buffers, copy array data
+
+        var gl = this.radiant.gl;
+        var view = this.vertices.subarray(0, this.size * this.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+
+        this.useResources();
+
+        // draw 2 triangles = 6 indices / 4 unique vertices per rectangle
+
+        gl.drawElements(gl.TRIANGLES, this.size * 6, gl.UNSIGNED_SHORT, 0);
+
+        if (this.drawResets) {
+            this.size = 0;
+        }
+
+        this.debugDrawCount++;
+        return true;
+    },
+
+    /**
+     * select shader, blendmode and texture
+     */
+    protected useResources: func() {
+
+        this.texture.use(this.textureUnit);
+        this.shader.use();
+        this.blendMode.use();
+    },
+
+    /**
+     * set up drawing state for given texture and current blendmode
+     *
+     * @param BlendMode blendMode
+     * @param Texture texure
+     */
+    protected setupState: func(object blendMode, object texture) {
+
+        if (this.blendMode !== blendMode || this.texture !== texture) {
+            this.draw();
+            this.blendMode = blendMode;
+            this.texture = texture;
+        }
+    },
+
+    /**
      * set up base matrix
      */
-    setupUniforms: func() {
+    protected setupUniforms: func() {
 
         var matrix = mat4.create();
         mat4.identity(matrix);
@@ -144,74 +208,6 @@ module Renderer = proto {
         mat4.scale(matrix, matrix, [ 2.0 / this.radiant.width, -2.0 / this.radiant.height, 1.0 ]);
 
         this.shader.uMatrix.value = matrix;
-        this.shader.uSampler.value = this.textureUnit;
+        this.shader.uTexture.value = this.textureUnit;
     },
-
-    /**
-     * draw previous added rectangles and reset list
-     */
-    draw: func() {
-
-        if (this.size === 0) {
-            return;
-        }
-
-        var gl = this.radiant.gl;
-
-        // select gl buffers, copy array data
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        var view = this.vertices.subarray(0, this.size * this.shader.attributeSize);
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-
-        // bind texture
-
-        this.currentTexture.use(this.textureUnit);
-
-        // assign uniforms and attributes
-
-        if (this.radiant.currentShader !== this.shader) {
-            this.shader.use();
-        }
-
-        // draw 2 triangles = 6 indices / 4 unique vertices per rectangle
-
-        gl.drawElements(gl.TRIANGLES, this.size * 6, gl.UNSIGNED_SHORT, 0);
-
-        this.size = 0;
-        this.debugDrawCount++;
-    },
-
-    /**
-     * set up drawing state for given texture and current blendmode
-     *
-     * @param Texture texure
-     */
-    setupState: func(object texture) {
-
-        if (this.currentTexture === null) {
-            this.currentTexture = texture;
-        }
-
-        if (this.currentBlendMode === null) {
-            this.currentBlendMode = this.radiant.blendMode;
-        }
-
-        if (this.radiant.blendMode !== this.currentBlendMode || texture !== this.currentTexture) {
-
-            // temporarily restore previous blend-mode and texture to draw old buffer before starting new
-
-            var newBlend = this.radiant.blendMode;
-            this.radiant.blendMode = this.currentBlendMode;
-
-            this.draw();
-
-            this.currentBlendMode = newBlend;
-            this.currentTexture = texture;
-            this.radiant.blendMode = newBlend;
-        }
-    },
-
 };

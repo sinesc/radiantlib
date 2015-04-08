@@ -32,10 +32,10 @@ module Plain = proto (Shader) {
     aRotation: null,
 
     /**
-     * uniform locations
+     * uniforms
      */
-    uMatrix: 0,
-    uSampler: 0,
+    uMatrix: null,
+    uTexture: null,
 
     /**
      * register attributes and uniforms with the shader
@@ -51,6 +51,6 @@ module Plain = proto (Shader) {
         this.registerAttribute('aRotation', 1, gl.FLOAT);
 
         this.registerUniform('uMatrix', 4, true);
-        this.registerUniform('uSampler');
+        this.registerUniform('uTexture');
     },
 };

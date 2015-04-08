@@ -26,14 +26,15 @@ var Color = require('../color');
 
 module Text = proto (Renderer) {
 
-    public Shader: Plain,
-    public textureUnit: 1,
+    protected Shader: Plain,
+    protected textureUnit: 1,
 
     public tabWidth: 32,
 
     /**
      * add a sprite to be drawn
      *
+     * @param BlendMode blendMode
      * @param Font font
      * @param string text
      * @param finite x
@@ -43,9 +44,9 @@ module Text = proto (Renderer) {
      * @param finite scaleX
      * @param finite scaleY
      */
-    write: func(object font, string text, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+    write: func(object blendMode, object font, string text, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
 
-        this.setupState(font.texture);
+        this.setupState(blendMode, font.texture);
 
         var index = this.size * this.shader.attributeSize;
         var vertices = this.vertices;

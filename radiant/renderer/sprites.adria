@@ -25,11 +25,12 @@ var Plain = require('../shader/plain');
 
 module Sprites = proto (Renderer) {
 
-    Shader: Plain,
+    protected Shader: Plain,
 
     /**
      * add a sprite to be drawn
      *
+     * @param BlendMode blendMode
      * @param Sprite sprite
      * @param integer frameId
      * @param finite x
@@ -39,9 +40,9 @@ module Sprites = proto (Renderer) {
      * @param finite scaleX
      * @param finite scaleY
      */
-    add: func(object sprite, finite frameId, finite x, finite y, finite color, finite rotation, finite scaleX, finite scaleY) {
+    add: func(object blendMode, object sprite, finite frameId, finite x, finite y, finite color, finite rotation, finite scaleX, finite scaleY) {
 
-        this.setupState(sprite.texture);
+        this.setupState(blendMode, sprite.texture);
 
         var index = this.size * this.shader.attributeSize;
         var vertices = this.vertices;

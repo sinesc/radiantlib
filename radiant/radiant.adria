@@ -20,28 +20,13 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-interface Radiant;
 
 var Listenable = require('astd/listenable');
+var BlendMode = require('./blend_mode');
+var Color = require('./color');
 var GL = window.WebGLRenderingContext;
 
-export Sprite = require('./sprite');
-export Sprites = require('./renderer/sprites');
-export Font = require('./font');
-export Text = require('./renderer/text');
-export Color = require('./color');
-export Scene = require('./scene');
-
-export BlendMode = proto {
-    public source      : GL.ONE,
-    public destination : GL.ZERO,
-    public order       : 0,
-    public constructor: func(finite source, finite destination, finite order = 0) {
-        this.source = source;
-        this.destination = destination;
-        this.order = order;
-    },
-};
+//import WebGLDebugUtils;
 
 /**
  * radiant 2d context
@@ -52,28 +37,15 @@ export BlendMode = proto {
  */
 module Radiant = proto (Listenable) {
 
-    public BLENDMODE: {
-        COPY    : new BlendMode(GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_ALPHA, 4),
-        NO_ALPHA: new BlendMode(GL.ONE,                 GL.ZERO,                0),
-        LIGHTEN : new BlendMode(GL.SRC_ALPHA,           GL.ONE,                 5),
-        OVERLAY : new BlendMode(GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_COLOR, 6),
-        OUTLINE : new BlendMode(GL.ONE_MINUS_SRC_ALPHA, GL.ONE,                 3),
-        EDGES   : new BlendMode(GL.DST_ALPHA,           GL.ONE_MINUS_SRC_ALPHA, 2),
-        MASK    : new BlendMode(GL.CONSTANT_COLOR,      GL.ONE_MINUS_SRC_ALPHA, 1),
-    },
+    public BLENDMODE: null,
 
     public canvas   : null,
     public gl       : null,
 
-    protected sm    : null,
-
-    protected clearR: 0.0,
-    protected clearG: 0.0,
-    protected clearB: 0.0,
-    protected clearA: 1.0,
-
+    public currentBlendMode: null,
     public currentTextures: null,
     public currentShader: null,
+    public currentAttributeStates: null,
 
     /**
      * construct new radiant context
@@ -90,6 +62,9 @@ module Radiant = proto (Listenable) {
             this.canvas = canvas;
         } else {
             this.canvas = document.createElement('canvas');
+
+//this.canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(this.canvas);
+//window.rcanvas = this.canvas;
 
             if (transparent !== true) {
                 this.canvas.setAttribute('moz-opaque', '');
@@ -121,6 +96,9 @@ module Radiant = proto (Listenable) {
             }
         }
 
+//this.gl = WebGLDebugUtils.makeDebugContext(this.gl);
+
+        this.setupBlendModes();
         this.setSize(width, height);
         this.restoreContext();
     },
@@ -136,6 +114,25 @@ module Radiant = proto (Listenable) {
         }
     },
 
+    /**
+     * register blendmodes with radiant
+     */
+    protected setupBlendModes: func() {
+
+        this.BLENDMODE = {
+            COPY    : new BlendMode(this, GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_ALPHA, 4),
+            NO_ALPHA: new BlendMode(this, GL.ONE,                 GL.ZERO,                0),
+            LIGHTEN : new BlendMode(this, GL.SRC_ALPHA,           GL.ONE,                 5),
+            OVERLAY : new BlendMode(this, GL.SRC_ALPHA,           GL.ONE_MINUS_SRC_COLOR, 6),
+            OUTLINE : new BlendMode(this, GL.ONE_MINUS_SRC_ALPHA, GL.ONE,                 3),
+            EDGES   : new BlendMode(this, GL.DST_ALPHA,           GL.ONE_MINUS_SRC_ALPHA, 2),
+            MASK    : new BlendMode(this, GL.CONSTANT_COLOR,      GL.ONE_MINUS_SRC_ALPHA, 1),
+        };
+    },
+
+    /**
+     * called once gl-context has been restored
+     */
     public restoreContext: func() {
 
         var gl = this.gl;
@@ -143,11 +140,12 @@ module Radiant = proto (Listenable) {
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        //gl.clearColor(this.clearR, this.clearG, this.clearB, this.clearA);
 
-        this.blendMode = this.BLENDMODE.COPY;
+        this.clearColor = this.clearColor;  // reapply clear color
+        this.currentBlendMode = null;
         this.currentShader = null;
         this.currentTextures = [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ];
+        this.currentAttributeStates = [ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ];
     },
 
     /**
@@ -155,38 +153,22 @@ module Radiant = proto (Listenable) {
      *
      * @param Color/integer color
      */
-    public clearColor: func(color = Color.BLACK) {
-
-        var tmp = color instanceof Color ? color : Color.fromInteger(color);
-        this.clearR = tmp.r / 256;
-        this.clearG = tmp.g / 256;
-        this.clearB = tmp.b / 256;
-        this.clearA = tmp.a / 256;
+    public clearColor: prop {
+        default: Color.BLACK,
+        set: func(value) {
+            storage = value instanceof Color ? value : Color.fromInteger(value);
+            this.gl.clearColor(storage.r / 255, storage.g / 255, storage.b / 255, storage.a / 255);
+        },
+        get: func() {
+            return storage;
+        },
     },
 
     /**
      * clears the scene using the current clear color
      */
     public clear: func() {
-
-        this.gl.clearColor(this.clearR, this.clearG, this.clearB, this.clearA);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-    },
-
-
-    /**
-     * get/set blendmode (@see Radiant::BLENDMODE)
-     *
-     * @param Array mode
-     */
-    blendMode: prop {
-        set: func(BlendMode mode) {
-            this.gl.blendFunc(mode.source, mode.destination);
-            storage = mode;
-        },
-        get: func() {
-            return storage;
-        }
     },
 
     /**
@@ -195,7 +177,7 @@ module Radiant = proto (Listenable) {
      * @param finite width
      * @param finite height
      */
-    setSize: func(finite width, finite height) {
+    public setSize: func(finite width, finite height) {
 
         this.canvas.width = width;
         this.canvas.height = height;
@@ -206,7 +188,7 @@ module Radiant = proto (Listenable) {
     /**
      * get/set canvas width
      */
-    width: prop {
+    public width: prop {
         set: func(value) {
             if (value !== this.canvas.width) {
                 this.canvas.width = value;
@@ -222,7 +204,7 @@ module Radiant = proto (Listenable) {
     /**
      * get/set canvas height
      */
-    height: prop {
+    public height: prop {
         set: func(value) {
             if (value !== this.canvas.height) {
                 this.canvas.height = value;

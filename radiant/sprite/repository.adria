@@ -1,0 +1,101 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var Sprite = require('../sprite');
+
+module Repository = proto {
+
+    protected radiant: null,
+    protected sprites: null,
+
+    public constructor: func(object radiant) {
+
+        this.radiant = radiant;
+        this.clear();
+    },
+
+    /**
+     * load given sprite, immediately return it and optionally call back once it is fully loaded
+     *
+     * @param string name
+     * @param array params
+     * @param object context
+     * @param function callback invoked once sprite is ready (guaranteed async)
+     * @return sprite object
+     */
+    public load: func(string name, [ [ [ params = [] ], context = this ], callback = null ]) {
+
+        // check if sprite is loaded
+
+        if (this.has(name)) {
+
+            if (callback !== null) {
+                setTimeout(func() { callback.apply(context, params); }, 0);
+            }
+
+            return this.sprites[name];
+        }
+
+        // not yet loaded
+
+        var sprite = new Sprite(this.radiant, name);
+        this.sprites[name] = sprite;
+
+        if (callback !== null) {
+            sprite.once('load', params, context, callback);
+        }
+
+        return sprite;
+    },
+
+    /**
+     * check if sprite is already known to repository
+     *
+     * @param string name
+     * @return boolean
+     */
+    public has: func(string name) {
+        return typeof this.sprites[name] !== 'undefined';
+    },
+
+    /**
+     * get existing sprite from repository
+     *
+     * @param string name
+     * @return Sprite
+     */
+    public get: func(string name) {
+
+        if (this.has(name)) {
+            this.sprites[name];
+        } else {
+            throw new Exception('unknown sprite name "$0"'.format(name));
+        }
+    },
+
+    /**
+     * clear sprite cache
+     */
+    public clear: func() {
+        this.sprites = Object.create(null);
+    },
+};

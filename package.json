@@ -1,17 +1,17 @@
 {
   "name": "radiant",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "WebGl 2d rendering engine",
   "files": [
-    "lib/",
+    "bin/",
     "demo/",
-    "www/",
+    "radiant/"
     "build.abc",
-    "COPYING",
-    "license-header",
+    "LICENSE",
+    "radiant.adria",
     "README.md"
   ],
-  "main": "./www/radiant.js",
+  "main": "./bin/radiant.js",
   "bin": {
   },
   "directories": {

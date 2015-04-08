@@ -21,7 +21,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Listenable = require('astd/listenable');
-var Texture = require('./texture');
+var TextureImage = require('./texture/image');
+var Frame = require('./sprite/frame');
+var Parameter = require('./sprite/parameter');
 
 /**
  * individual sprite
@@ -43,17 +45,17 @@ module Sprite = proto (Listenable) {
     frames: null,
 
     /**
-     * set to true once the sprite is ready
+     * set to true once the sprite is ready !TODO getter
      */
     ready: false,
 
     /**
-     * @var integer width of the sprite
+     * @var integer width of the sprite !TODO getter
      */
     width: 0,
 
     /**
-     * @var integer height of the sprite
+     * @var integer height of the sprite !TODO getter
      */
     height: 0,
 
@@ -77,7 +79,7 @@ module Sprite = proto (Listenable) {
      *
      * @param string/Parameter params
      */
-    constructor: func(object radiant, params) {
+    public constructor: func(object radiant, params) {
 
         this.radiant = radiant;
         this.frames = [];
@@ -109,7 +111,7 @@ module Sprite = proto (Listenable) {
     /**
      * @var finite anchor u position (0..1 is inside the sprite)
      */
-    anchorU: prop {
+    public anchorU: prop {
         get: func() {
             return this.anchorX / this.width;
         },
@@ -121,7 +123,7 @@ module Sprite = proto (Listenable) {
     /**
      * @var finite anchor v position (0..1 is inside the sprite)
      */
-    anchorV: prop {
+    public anchorV: prop {
         get: func() {
             return this.anchorY / this.height;
         },
@@ -136,11 +138,11 @@ module Sprite = proto (Listenable) {
      * @param Image image
      * @param Parameter params
      */
-    generate: func(object image, Parameter params) {
+    protected generate: func(object image, Parameter params) {
 
         // create texture
 
-        this.texture = new Texture(this.radiant, image);
+        this.texture = new TextureImage(this.radiant, image);
 
         // try layout auto-detection
 
@@ -155,100 +157,38 @@ module Sprite = proto (Listenable) {
         // compute frames
 
         for (var id = params.start, end = params.start + params.count; id < end; id++) {
-            this.frames.push(getFrame(layout, this.texture, params.width, params.height, id));
+            this.frames.push(this.getFrame(layout, this.texture, params.width, params.height, id));
         }
 
         this.ready = true;
         this.execute('load');
-    }
-};
-
-/**
- * calculates the coordinates for a specific frame using given layout
- *
- * @param string layout horizontal (ids count left to right, top to bottom) or vertical (ids count top to bottom, left to right)
- * @param object texture
- * @param finite spriteWidth width for individual sprite frames
- * @param finite spriteHeight height for individual sprite frames
- * @param finite id frame id
- */
-var getFrame = func(string layout, object texture, finite spriteWidth, finite spriteHeight, finite id) {
-
-    // calculate x and y for given frame using defined layout order
-
-    var spl, x, y;
-
-    if (layout === Parameter::LAYOUT_HORIZONTAL) {
-        spl = texture.width / spriteWidth;
-        x = Math.floor(id % spl) * spriteWidth;
-        y = Math.floor(id / spl) * spriteHeight;
-    } else {
-        spl = texture.height / spriteHeight;
-        x = Math.floor(id / spl) * spriteWidth;
-        y = Math.floor(id % spl) * spriteHeight;
-    }
-
-    return new Frame(texture, x, y, spriteWidth, spriteHeight);
-};
-
-/**
- * describes a frame's u/v position within the sprite's texture
- */
-export Frame = proto {
-
-    u0      : 0.0,
-    u1      : 0.0,
-    v0      : 0.0,
-    v1      : 0.0,
-
-    constructor: func(object texture, finite x, finite y, finite width, finite height) {
-
-        var uv0 = texture.getUV(x, y);
-        var uv1 = texture.getUV(x + width, y + height);
-
-        this.u0 = uv0[0];
-        this.u1 = uv1[0];
-        this.v0 = uv0[1];
-        this.v1 = uv1[1];
     },
-};
-
-/**
- * describes sprite construction properties
- */
-export Parameter = proto {
 
     /**
-     * frame layout types
+     * calculates the coordinates for a specific frame using given layout
+     *
+     * @param string layout horizontal (ids count left to right, top to bottom) or vertical (ids count top to bottom, left to right)
+     * @param object texture
+     * @param finite spriteWidth width for individual sprite frames
+     * @param finite spriteHeight height for individual sprite frames
+     * @param finite id frame id
      */
-    LAYOUT_AUTO         : 'auto',
-    LAYOUT_HORIZONTAL   : 'horizontal',
-    LAYOUT_VERTICAL     : 'vertical',
+    protected getFrame: func(string layout, object texture, finite spriteWidth, finite spriteHeight, finite id) {
 
-    file    : '',
-    width   : -1,
-    height  : -1,
-    anchorU : 0.5,
-    anchorV : 0.5,
-    start   : 0,
-    count   : 1,
-    layout  : 'vertical',
+        // calculate x and y for given frame using defined layout order
 
-    constructor: func(string? file = null) {
+        var spl, x, y;
 
-        if (file === null) {
-            return;
+        if (layout === Parameter::LAYOUT_HORIZONTAL) {
+            spl = texture.width / spriteWidth;
+            x = Math.floor(id % spl) * spriteWidth;
+            y = Math.floor(id / spl) * spriteHeight;
+        } else {
+            spl = texture.height / spriteHeight;
+            x = Math.floor(id / spl) * spriteWidth;
+            y = Math.floor(id % spl) * spriteHeight;
         }
 
-        this.file = file;
-
-        var match = file.match(/_([0-9]+)x([0-9]+)x([0-9]+)\./);
-
-        if (match !== null) {
-            this.width = parseInt(match[1]);
-            this.height = parseInt(match[2]);
-            this.count = parseInt(match[3]);
-            this.layout = Parameter::LAYOUT_AUTO;
-        }
+        return new Frame(texture, x, y, spriteWidth, spriteHeight);
     },
 };
