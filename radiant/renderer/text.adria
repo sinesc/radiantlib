@@ -44,13 +44,13 @@ module Text = proto (Renderer) {
      * @param finite scaleX
      * @param finite scaleY
      */
-    write: func(object blendMode, object font, string text, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+    public write: func(object blendMode, object font, string text, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
 
         this.setupState(blendMode, font.texture);
 
         var index = this.size * this.shader.attributeSize;
-        var vertices = this.vertices;
-        var intView = this.vertexIntView;
+        var floatView = this.vertices.floatView;
+        var intView = this.vertices.intView;
         var characters = font.characters;
         var colorValue = typeof color === 'number' ? color : color.value;
 
@@ -75,47 +75,47 @@ module Text = proto (Renderer) {
 
             // bottom right
 
-            vertices[index++] = x;
-            vertices[index++] = y;
-            vertices[index++] = offsetX1;
-            vertices[index++] = offsetY1;
-            vertices[index++] = character.u1;
-            vertices[index++] = character.v1;
+            floatView[index++] = x;
+            floatView[index++] = y;
+            floatView[index++] = offsetX1;
+            floatView[index++] = offsetY1;
+            floatView[index++] = character.u1;
+            floatView[index++] = character.v1;
             intView[index++] = colorValue;
-            vertices[index++] = rotation;
+            floatView[index++] = rotation;
 
             // bottom left
 
-            vertices[index++] = x;
-            vertices[index++] = y;
-            vertices[index++] = offsetX0;
-            vertices[index++] = offsetY1;
-            vertices[index++] = character.u0;
-            vertices[index++] = character.v1;
+            floatView[index++] = x;
+            floatView[index++] = y;
+            floatView[index++] = offsetX0;
+            floatView[index++] = offsetY1;
+            floatView[index++] = character.u0;
+            floatView[index++] = character.v1;
             intView[index++] = colorValue;
-            vertices[index++] = rotation;
+            floatView[index++] = rotation;
 
             // top left
 
-            vertices[index++] = x;
-            vertices[index++] = y;
-            vertices[index++] = offsetX0;
-            vertices[index++] = offsetY0;
-            vertices[index++] = character.u0;
-            vertices[index++] = character.v0;
+            floatView[index++] = x;
+            floatView[index++] = y;
+            floatView[index++] = offsetX0;
+            floatView[index++] = offsetY0;
+            floatView[index++] = character.u0;
+            floatView[index++] = character.v0;
             intView[index++] = colorValue;
-            vertices[index++] = rotation;
+            floatView[index++] = rotation;
 
             // top right
 
-            vertices[index++] = x;
-            vertices[index++] = y;
-            vertices[index++] = offsetX1;
-            vertices[index++] = offsetY0;
-            vertices[index++] = character.u1;
-            vertices[index++] = character.v0;
+            floatView[index++] = x;
+            floatView[index++] = y;
+            floatView[index++] = offsetX1;
+            floatView[index++] = offsetY0;
+            floatView[index++] = character.u1;
+            floatView[index++] = character.v0;
             intView[index++] = colorValue;
-            vertices[index++] = rotation;
+            floatView[index++] = rotation;
 
             offsetX0 += characterWidth;
             this.size++;

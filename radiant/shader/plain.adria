@@ -19,38 +19,37 @@ var Shader = require('../shader');
 
 module Plain = proto (Shader) {
 
-    fragmentSrc: resource('./plain.fs'),
-    vertexSrc: resource('./plain.vs'),
+    protected fragmentSrc: resource('./plain.fs'),
+    protected vertexSrc: resource('./plain.vs'),
 
     /**
      * attributes
      */
-    aPosition: null,
-    aVertexOffset: null,
-    aTextureCoord: null,
-    aColor: null,
-    aRotation: null,
+    protected aPosition: null,
+    protected aVertexOffset: null,
+    protected aTextureCoord: null,
+    protected aColor: null,
+    protected aRotation: null,
 
     /**
      * uniforms
      */
-    uMatrix: null,
-    uTexture: null,
+    protected uMatrix: null,
+    protected uTexture: null,
 
     /**
      * register attributes and uniforms with the shader
      */
-    register: func() {
+    protected register: func() {
 
-        var gl = this.radiant.gl;
+        this.registerAttribute('aPosition', 2, self::FLOAT);
+        this.registerAttribute('aVertexOffset', 2, self::FLOAT);
+        this.registerAttribute('aTextureCoord', 2, self::FLOAT);
+        this.registerAttribute('aColor', 4, self::UNSIGNED_BYTE, true);
+        this.registerAttribute('aRotation', 1, self::FLOAT);
 
-        this.registerAttribute('aPosition', 2, gl.FLOAT);
-        this.registerAttribute('aVertexOffset', 2, gl.FLOAT);
-        this.registerAttribute('aTextureCoord', 2, gl.FLOAT);
-        this.registerAttribute('aColor', 4, gl.UNSIGNED_BYTE, true);
-        this.registerAttribute('aRotation', 1, gl.FLOAT);
-
-        this.registerUniform('uMatrix', 4, true);
-        this.registerUniform('uTexture');
+        this.registerUniform('uMatrix', Shader::FLOAT, 4, Shader::UNIFORM_MATRIX);
+        this.registerUniform('uScreenOffset', Shader::FLOAT, 2, Shader::UNIFORM_VALUE);
+        this.registerUniform('uTexture', Shader::INT, 1);
     },
 };

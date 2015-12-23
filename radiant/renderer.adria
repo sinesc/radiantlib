@@ -20,16 +20,12 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var mat4 = require('gl-matrix.js').mat4;
+var mat4 = require('./glmatrix').mat4;
+var MixedBuffer = require('./buffer/mixed');
 
 module Renderer = proto {
 
     public radiant: null,
-
-    /**
-     * @var integer maximum number of rectangles that can be drawn in one run
-     */
-    public maxSize: 65536 / 4,
 
     /**
      * @var integer current number of rectangles
@@ -42,20 +38,12 @@ module Renderer = proto {
     protected drawResets: true,
 
     /**
-     * @var Float32Array vertices, 4 per rectangle
+     * @var MixedBuffer vertices, 4 per rectangle
      */
     public vertices: null,
-    public vertexIntView: null,
-    public vertexBuffer: null,
 
     /**
-     * indices into the vertex data, 6 per rectangle (indexes 2 duplicate vertices where the triangles meet)
-     */
-    protected indices: null,
-    protected indexBuffer: null,
-
-    /**
-     * the shader used for the rendering
+     * the shader type used for the rendering
      */
     protected Shader: null,
 
@@ -72,6 +60,9 @@ module Renderer = proto {
      */
     public debugDrawCount: 0,
 
+    public screenOffsetX: 0,
+    public screenOffsetY: 0,
+
     /**
      * creates a new renderer
      *
@@ -84,26 +75,7 @@ module Renderer = proto {
 
         // set up vertex-indices for each rectangle
 
-        var numVertices = this.maxSize * 4;
-        this.vertices = new Float32Array(numVertices * this.shader.attributeSize / 4);
-        this.vertexIntView = new Uint32Array(this.vertices.buffer);
-        this.vertexBuffer = null;
-
-        var numIndices = this.maxSize * 6;
-        this.indices = new Uint16Array(numIndices);
-        this.indexBuffer = null;
-
-        // create 6 indices per rectangle (3 per triangle, vertices 0 and 2 are shared between triangles)
-
-        for (var index = 0, vertex = 0; index < numIndices; index += 6/*, vertex += 4*/) {
-            this.indices[index + 0] = vertex + 0;
-            this.indices[index + 1] = vertex + 1;
-            this.indices[index + 2] = vertex + 2;
-            this.indices[index + 3] = vertex + 0;
-            this.indices[index + 4] = vertex + 2;
-            this.indices[index + 5] = vertex + 3;
-            vertex += 4;
-        }
+        this.vertices = new MixedBuffer(radiant, radiant.index.size * this.shader.attributeSize /* / 4 * 4  */);
 
         this.restoreContext();
         this.setupUniforms();
@@ -112,33 +84,33 @@ module Renderer = proto {
         this.radiant.on('resize', this, this.setupUniforms);
     },
 
+    /**
+     * clean up buffers and listener
+     */
     public destroy: func() {
 
         this.radiant.off('contextrestored', this, this.restoreContext);
         this.radiant.off('resize', this, this.setupUniforms);
         this.shader.destroy();
+        this.vertices.destroy();
+    },
 
-        var gl = this.radiant.gl;
-        gl.deleteBuffer(this.vertexBuffer);
-        gl.deleteBuffer(this.indexBuffer);
+    /**
+     * sets the renderer's screen offset. this offset is passed via uniform to the shader,
+     * so it affects the rendering even when a vertex buffers have not been updated (i.e. in the case of particles)
+     *
+     * @param integer x
+     * @param integer y
+     */
+    public setScreenOffset: func(finite x = 0, finite y = 0) {
+        this.screenOffsetX = x;
+        this.screenOffsetY = y;
     },
 
     /**
      * restore webgl context after context loss
      */
-    public restoreContext: func() {
-
-        var gl = this.radiant.gl;
-
-        this.vertexBuffer = gl.createBuffer();
-        this.indexBuffer = gl.createBuffer();
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.DYNAMIC_DRAW);
-    },
+    public restoreContext: func() { },
 
     /**
      * draw previous added rectangles and reset list
@@ -149,20 +121,16 @@ module Renderer = proto {
             return false;
         }
 
-        // select gl buffers, copy array data
+        // update vertex data in gl buffers, set screen offset
 
-        var gl = this.radiant.gl;
-        var view = this.vertices.subarray(0, this.size * this.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-
+        this.vertices.upload(0, this.size * this.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
+        this.shader.uScreenOffset.value[0] = this.screenOffsetX;
+        this.shader.uScreenOffset.value[1] = this.screenOffsetY;
         this.useResources();
 
         // draw 2 triangles = 6 indices / 4 unique vertices per rectangle
 
-        gl.drawElements(gl.TRIANGLES, this.size * 6, gl.UNSIGNED_SHORT, 0);
+        this.radiant.gl.drawElements(this.radiant.gl.TRIANGLES, this.size * 6, this.radiant.gl.UNSIGNED_SHORT, 0);
 
         if (this.drawResets) {
             this.size = 0;
@@ -190,7 +158,7 @@ module Renderer = proto {
      */
     protected setupState: func(object blendMode, object texture) {
 
-        if (this.blendMode !== blendMode || this.texture !== texture) {
+        if (this.blendMode !== blendMode || this.texture !== texture || (this.size >= this.radiant.index.size)) {
             this.draw();
             this.blendMode = blendMode;
             this.texture = texture;
@@ -209,5 +177,6 @@ module Renderer = proto {
 
         this.shader.uMatrix.value = matrix;
         this.shader.uTexture.value = this.textureUnit;
+        this.shader.uScreenOffset.value = new Float32Array(2);
     },
 };

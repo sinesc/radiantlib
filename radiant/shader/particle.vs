@@ -1,5 +1,6 @@
 
 uniform mat4 uMatrix;
+uniform vec2 uScreenOffset;
 uniform float uNow;
 
 attribute float aStartTime;
@@ -15,31 +16,38 @@ attribute float aRotation;
 attribute vec4 aColor;
 
 varying vec2 vTextureCoord;
+varying vec2 vRampCoord;
 varying vec4 vColor;
 
 void main() {
-float dummy = aStartTime * aRotation * aAcceleration;
+
+    float elapsed = uNow - aStartTime;
+    float progress = elapsed / aTimeToLive;
 
     // pass to fragment shader
 
     vTextureCoord.x = aCorner.x + 0.5;
     vTextureCoord.y = aCorner.y + 0.5;
     vColor = aColor;
+    vRampCoord = vec2(progress, 0.5);
 
-    // compute vertex position
-
-    float progress = (uNow - aStartTime) / aTimeToLive;
+    // compute vertex position/rotation
 
     float size = mix(aStartSize, aEndSize, progress);
     size = (progress < 0.0 || progress > 1.0) ? 0.0 : size;
 
     vec2 sizedCorner;
-    sizedCorner.x = aCorner.x * size;
-    sizedCorner.y = aCorner.y * size;
+    float sinRotation = sin(aRotation);
+    float cosRotation = cos(aRotation);
+    sizedCorner.x = (aCorner.x * cosRotation - aCorner.y * sinRotation) * size;
+    sizedCorner.y = (aCorner.x * sinRotation + aCorner.y * cosRotation) * size;
 
+    // motion offset
+
+    float travelledDistance = (aVelocity * elapsed) + (0.5 * aAcceleration * pow(elapsed, 2.0));
     vec2 offsetOrigin;
-    offsetOrigin.x = aOrigin.x + cos(aAngle) * aVelocity * progress;
-    offsetOrigin.y = aOrigin.y + sin(aAngle) * aVelocity * progress;
+    offsetOrigin.x = aOrigin.x + cos(aAngle) * travelledDistance;
+    offsetOrigin.y = aOrigin.y + sin(aAngle) * travelledDistance;
 
-    gl_Position = uMatrix * vec4(offsetOrigin + sizedCorner, 0.0, 1.0);
+    gl_Position = uMatrix * vec4(offsetOrigin + sizedCorner + uScreenOffset, 0.0, 1.0);
 }

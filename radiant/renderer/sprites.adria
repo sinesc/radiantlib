@@ -40,13 +40,13 @@ module Sprites = proto (Renderer) {
      * @param finite scaleX
      * @param finite scaleY
      */
-    add: func(object blendMode, object sprite, finite frameId, finite x, finite y, finite color, finite rotation, finite scaleX, finite scaleY) {
+    public add: func(object blendMode, object sprite, finite frameId, finite x, finite y, finite color, finite rotation, finite scaleX, finite scaleY) {
 
         this.setupState(blendMode, sprite.texture);
 
         var index = this.size * this.shader.attributeSize;
-        var vertices = this.vertices;
-        var intView = this.vertexIntView;
+        var floatView = this.vertices.floatView;
+        var intView = this.vertices.intView;
         var frame = sprite.frames[frameId];
 
         // corner positions relative to x/y
@@ -58,47 +58,47 @@ module Sprites = proto (Renderer) {
 
         // bottom right
 
-        vertices[index++] = x;
-        vertices[index++] = y;
-        vertices[index++] = offsetX1;
-        vertices[index++] = offsetY1;
-        vertices[index++] = frame.u1;
-        vertices[index++] = frame.v1;
+        floatView[index++] = x;
+        floatView[index++] = y;
+        floatView[index++] = offsetX1;
+        floatView[index++] = offsetY1;
+        floatView[index++] = frame.u1;
+        floatView[index++] = frame.v1;
         intView[index++] = color;
-        vertices[index++] = rotation;
+        floatView[index++] = rotation;
 
         // bottom left
 
-        vertices[index++] = x;
-        vertices[index++] = y;
-        vertices[index++] = offsetX0;
-        vertices[index++] = offsetY1;
-        vertices[index++] = frame.u0;
-        vertices[index++] = frame.v1;
+        floatView[index++] = x;
+        floatView[index++] = y;
+        floatView[index++] = offsetX0;
+        floatView[index++] = offsetY1;
+        floatView[index++] = frame.u0;
+        floatView[index++] = frame.v1;
         intView[index++] = color;
-        vertices[index++] = rotation;
+        floatView[index++] = rotation;
 
         // top left
 
-        vertices[index++] = x;
-        vertices[index++] = y;
-        vertices[index++] = offsetX0;
-        vertices[index++] = offsetY0;
-        vertices[index++] = frame.u0;
-        vertices[index++] = frame.v0;
+        floatView[index++] = x;
+        floatView[index++] = y;
+        floatView[index++] = offsetX0;
+        floatView[index++] = offsetY0;
+        floatView[index++] = frame.u0;
+        floatView[index++] = frame.v0;
         intView[index++] = color;
-        vertices[index++] = rotation;
+        floatView[index++] = rotation;
 
         // top right
 
-        vertices[index++] = x;
-        vertices[index++] = y;
-        vertices[index++] = offsetX1;
-        vertices[index++] = offsetY0;
-        vertices[index++] = frame.u1;
-        vertices[index++] = frame.v0;
+        floatView[index++] = x;
+        floatView[index++] = y;
+        floatView[index++] = offsetX1;
+        floatView[index++] = offsetY0;
+        floatView[index++] = frame.u1;
+        floatView[index++] = frame.v0;
         intView[index++] = color;
-        vertices[index++] = rotation;
+        floatView[index++] = rotation;
 
         this.size++;
     },

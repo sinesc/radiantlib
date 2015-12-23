@@ -1,5 +1,6 @@
 
 uniform mat4 uMatrix;
+uniform vec2 uScreenOffset;
 
 attribute vec2 aPosition;
 attribute vec2 aVertexOffset;
@@ -26,5 +27,5 @@ void main() {
     offset.x = aVertexOffset.x * cosRotation - aVertexOffset.y * sinRotation;
     offset.y = aVertexOffset.x * sinRotation + aVertexOffset.y * cosRotation;
 
-    gl_Position = uMatrix * vec4(aPosition + offset, 0.0, 1.0);
+    gl_Position = uMatrix * vec4(aPosition + offset + uScreenOffset, 0.0, 1.0);
 }

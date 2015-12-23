@@ -19,54 +19,53 @@ var Shader = require('../shader');
 
 module Particle = proto (Shader) {
 
-    fragmentSrc: resource('./particle.fs'),
-    vertexSrc: resource('./particle.vs'),
+    protected fragmentSrc: resource('./particle.fs'),
+    protected vertexSrc: resource('./particle.vs'),
 
     /**
      * attributes
      */
-    aStartTime      : null,
-    aTimeToLive     : null,
-    aStartSize      : null,
-    aEndSize        : null,
-    aOrigin         : null,
-    aCorner         : null,
-    aVelocity       : null,
-    aAcceleration   : null,
-    aAngle          : null,
-    aRotation       : null,
-    aColor          : null,
+    protected aStartTime      : null,
+    protected aTimeToLive     : null,
+    protected aStartSize      : null,
+    protected aEndSize        : null,
+    protected aOrigin         : null,
+    protected aCorner         : null,
+    protected aVelocity       : null,
+    protected aAcceleration   : null,
+    protected aAngle          : null,
+    protected aRotation       : null,
+    protected aColor          : null,
 
     /**
      * uniforms
      */
-    uMatrix         : null,
-    uNow            : null,
-    uTexture        : null,
-    uRamp           : null,
+    protected uMatrix         : null,
+    protected uNow            : null,
+    protected uTexture        : null,
+    protected uRamp           : null,
 
     /**
      * register attributes and uniforms with the shader
      */
-    register: func() {
+    protected register: func() {
 
-        var gl = this.radiant.gl;
+        this.registerAttribute('aStartTime', 1, self::FLOAT);
+        this.registerAttribute('aTimeToLive', 1, self::FLOAT);
+        this.registerAttribute('aStartSize', 1, self::FLOAT);
+        this.registerAttribute('aEndSize', 1, self::FLOAT);
+        this.registerAttribute('aOrigin', 2, self::FLOAT);
+        this.registerAttribute('aCorner', 2, self::FLOAT);
+        this.registerAttribute('aVelocity', 1, self::FLOAT);
+        this.registerAttribute('aAcceleration', 1, self::FLOAT);
+        this.registerAttribute('aAngle', 1, self::FLOAT);
+        this.registerAttribute('aRotation', 1, self::FLOAT);
+        this.registerAttribute('aColor', 4, self::UNSIGNED_BYTE, true);
 
-        this.registerAttribute('aStartTime', 1, gl.FLOAT);
-        this.registerAttribute('aTimeToLive', 1, gl.FLOAT);
-        this.registerAttribute('aStartSize', 1, gl.FLOAT);
-        this.registerAttribute('aEndSize', 1, gl.FLOAT);
-        this.registerAttribute('aOrigin', 2, gl.FLOAT);
-        this.registerAttribute('aCorner', 2, gl.FLOAT);
-        this.registerAttribute('aVelocity', 1, gl.FLOAT);
-        this.registerAttribute('aAcceleration', 1, gl.FLOAT);
-        this.registerAttribute('aAngle', 1, gl.FLOAT);
-        this.registerAttribute('aRotation', 1, gl.FLOAT);
-        this.registerAttribute('aColor', 4, gl.UNSIGNED_BYTE, true);
-
-        this.registerUniform('uMatrix', 4, true);
-        this.registerUniform('uNow', 1, false, true);
-        this.registerUniform('uTexture');
+        this.registerUniform('uMatrix', Shader::FLOAT, 4, Shader::UNIFORM_MATRIX);
+        this.registerUniform('uScreenOffset', Shader::FLOAT, 2, Shader::UNIFORM_VALUE);
+        this.registerUniform('uTexture', Shader::INT, 1);
+        this.registerUniform('uNow', Shader::FLOAT);
         this.registerUniform('uRamp');
     },
 };

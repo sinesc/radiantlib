@@ -22,6 +22,7 @@
  */
 var Renderer = require('../renderer');
 var Particle = require('../shader/particle');
+import Map;
 
 module Particles = proto (Renderer) {
 
@@ -45,7 +46,7 @@ module Particles = proto (Renderer) {
     public constructor: func(object radiant) {
 
         Renderer->constructor(radiant);
-        this.emitters = [ ];
+        this.emitters = new Map();
     },
 
     /**
@@ -59,7 +60,7 @@ module Particles = proto (Renderer) {
     public add: func(object blendMode, object emitter, finite x, finite y) {
 
         this.setupState(blendMode, emitter.texture, emitter.ramp);
-        this.vertices.set(emitter.data, this.size * 4);
+        this.vertices.floatView.set(emitter.data, this.size * 4);
         this.size += emitter.size;
     },
 

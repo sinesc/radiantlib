@@ -22,38 +22,56 @@
  */
 var Uniform = require('./uniform');
 var Attribute = require('./attribute');
+var GL = window.WebGLRenderingContext;
 
 module Shader = proto {
 
-    radiant: null,
+    public BYTE             : GL.BYTE,
+    public UNSIGNED_BYTE    : GL.UNSIGNED_BYTE,
+    public SHORT            : GL.SHORT,
+    public UNSIGNED_SHORT   : GL.UNSIGNED_SHORT,
+    public INT              : GL.INT,
+    public UNSIGNED_INT     : GL.UNSIGNED_INT,
+    public FLOAT            : GL.FLOAT,
 
-    fragmentSrc: '',
-    vertexSrc: '',
-
-    /**
-     * @var actual gl shader program
-     */
-    program: null,
-
-    /**
-     * @var Array registered <Attribute>s
-     */
-    attributes: null,
-
-    /**
-     * @var Array registered <Uniform>s
-     */
-    uniforms: null,
-
-    /**
-     * @var boolean true after a uniform was changed until change was propagated to gl
-     */
-    //uniformUpdateRequired: false,
+    public UNIFORM_MATRIX   : Uniform::MATRIX,
+    public UNIFORM_ARRAY    : Uniform::ARRAY,
+    public UNIFORM_VALUE    : Uniform::VALUE,
 
     /**
      * @var finite total attributes size in bytes
      */
-    attributeSize: 0,
+    public attributeSize: 0,
+
+    /**
+     * @var object radiant reference to radiant
+     */
+    protected radiant: null,
+
+    /**
+     * @var string fragmentSrc fragment shader source code
+     */
+    protected fragmentSrc: '',
+
+    /**
+     * @var string vertexSrc vertex shader source code
+     */
+    protected vertexSrc: '',
+
+    /**
+     * @var actual gl shader program
+     */
+    private program: null,
+
+    /**
+     * @var Array registered <Attribute>s
+     */
+    private attributes: null,
+
+    /**
+     * @var Array registered <Uniform>s
+     */
+    private uniforms: null,
 
     /**
      * construct new shader
@@ -65,9 +83,11 @@ module Shader = proto {
         this.radiant = radiant;
         this.attributes = [];
         this.uniforms = [];
+
         this.compile();
-        this.radiant.gl.useProgram(this.program);
+        this.useProgram();
         this.register();
+
         this.radiant.on('contextrestored', this, this.restoreContext);
     },
 
@@ -84,21 +104,31 @@ module Shader = proto {
     },
 
     /**
-     * register attributes and uniforms here
+     * use this shader programm
      */
-    protected register: func() { },
+    public use: func() {
+
+        if (this.radiant.currentShader === this) {
+            return;
+        }
+
+        this.useProgram();
+        this.useAttributes();
+        this.useUniforms();
+
+        this.radiant.currentShader = this;
+    },
 
     /**
      * generate shader (compile it, associate uniforms and attributes)
      */
     public restoreContext: func() {
 
-        var gl = this.radiant.gl;
         var attributes = this.attributes;
         var uniforms = this.uniforms;
 
         this.compile();
-        gl.useProgram(this.program);
+        this.useProgram();
 
         for (var i = 0, num = attributes.length; i < num; ++i) {
             attributes[i].restoreContext();
@@ -110,10 +140,15 @@ module Shader = proto {
     },
 
     /**
+     * register attributes and uniforms here
+     */
+    protected register: func() { },
+
+    /**
      * registers a shader attribute with this wrapper
      *
      * @param string srcName name in shader source
-     * @param integer parts
+     * @param integer parts number of components
      * @param integer type GL type
      * @param boolean normalized
      * @param string propName name of the object property on this object that will refer to srcName
@@ -127,9 +162,22 @@ module Shader = proto {
     },
 
     /**
+     * registers a shader uniform with this wrapper
+     *
+     * @see Uniform
+     * @param string propName property name to generate on the shader object, defaults to srcName
+     */
+    protected registerUniform: func(string srcName, finite type = Uniform::INT, finite parts = 1, finite layout = Uniform::VALUE, string propName = srcName) {
+
+        var uniform = new Uniform(this, srcName, type, parts, layout);
+        this[propName] = uniform;
+        this.uniforms.push(uniform);
+    },
+
+    /**
      * use vertex attribute pointers from this shader
      */
-    protected useAttributes: func() {
+    private useAttributes: func() {
 
         var attributes = this.attributes;
         var offset = 0;
@@ -146,22 +194,9 @@ module Shader = proto {
     },
 
     /**
-     * registers a shader uniform with this wrapper
-     *
-     * @param string srcName name in shader source
-     * @param string propName name of the object property on this object that will refer to srcName
-     */
-    protected registerUniform: func(string srcName, finite parts = 1, boolean isMatrix = false, boolean isFloat = isMatrix, string propName = srcName) {
-
-        var uniform = new Uniform(this, srcName, parts, isMatrix, isFloat);
-        this[propName] = uniform;
-        this.uniforms.push(uniform);
-    },
-
-    /**
      * set uniforms for this shader
      */
-    protected useUniforms: func() {
+    private useUniforms: func() {
 
         var uniforms = this.uniforms;
 
@@ -171,31 +206,16 @@ module Shader = proto {
     },
 
     /**
-     * use this shader programm
+     * use program for this shader
      */
-    public use: func() {
-
-        if (this.radiant.currentShader === this) {
-            return;
-        }
-
+    private useProgram: func() {
         this.radiant.gl.useProgram(this.program);
-        this.useAttributes();
-
-        // uniformUpdateRequired is set by individual uniforms
-
-        //if (this.uniformUpdateRequired) {
-            this.useUniforms();
-        //    this.uniformUpdateRequired = false;
-        //}
-
-        this.radiant.currentShader = this;
     },
 
     /**
      * compile vertex and fragment source to program
      */
-    protected compile: func() {
+    private compile: func() {
 
         var gl = this.radiant.gl;
 
@@ -211,6 +231,13 @@ module Shader = proto {
         this.program = shaderProgram;
     },
 
+    /**
+     * create a shader of given type from given source code
+     *
+     * @param finite type gl shader type
+     * @param string src shader source code
+     * @return object gl shader object
+     */
     private createShader: func(finite type, string src) {
 
         var gl = this.radiant.gl;

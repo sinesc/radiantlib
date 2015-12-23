@@ -24,9 +24,10 @@
 var Listenable = require('astd/listenable');
 var BlendMode = require('./blend_mode');
 var Color = require('./color');
+var IndexBuffer = require('./buffer/index');
 var GL = window.WebGLRenderingContext;
 
-//import WebGLDebugUtils;
+import WebGLDebugUtils;
 
 /**
  * radiant 2d context
@@ -41,11 +42,14 @@ module Radiant = proto (Listenable) {
 
     public canvas   : null,
     public gl       : null,
+    public index    : null,
 
     public currentBlendMode: null,
     public currentTextures: null,
     public currentShader: null,
     public currentAttributeStates: null,
+    public currentElementBuffer: null,
+    public currentArrayBuffer: null,
 
     /**
      * construct new radiant context
@@ -98,6 +102,7 @@ module Radiant = proto (Listenable) {
 
 //this.gl = WebGLDebugUtils.makeDebugContext(this.gl);
 
+        this.index = new IndexBuffer(this);
         this.setupBlendModes();
         this.setSize(width, height);
         this.restoreContext();

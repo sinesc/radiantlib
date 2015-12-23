@@ -39,7 +39,7 @@ module Attribute = proto {
     location    : 0,
     size        : 0,
 
-    public constructor: func(shader, srcName, parts, type, normalized) {
+    public constructor: func(shader, string srcName, finite parts, finite type, boolean normalized) {
 
         var gl = shader.radiant.gl;
 
@@ -69,7 +69,6 @@ module Attribute = proto {
 
         var gl = this.shader.radiant.gl;
         this.location = gl.getAttribLocation(this.shader.program, this.srcName);
-        this.use();
     },
 
     public disable: func(object radiant, finite start) {

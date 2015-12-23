@@ -20,40 +20,60 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var GL = window.WebGLRenderingContext;
+
 module Uniform = proto {
 
-    shader      : null,
-    srcName     : '',
-    parts       : 0,
-    isMatrix    : false,
-    isFloat     : true,
-    location    : 0,
-    funcName    : '',
+    public INT          : GL.INT,
+    public FLOAT        : GL.FLOAT,
 
-    constructor: func(shader, srcName, parts, isMatrix, isFloat) {
+    public MATRIX       : 67,
+    public ARRAY        : 73,
+    public VALUE        : 77,
 
-        this.shader = shader;
-        this.srcName = srcName;
-        this.parts = parts;
-        this.isMatrix = isMatrix;
-        this.isFloat = isFloat;
-        this.location = shader.radiant.gl.getUniformLocation(shader.program, srcName);
+    protected shader    : null,
+    protected srcName   : '',
+    protected parts     : 0,
+    protected isFloat   : false,
+    protected isMatrix  : false,
+    protected isArray   : false,
+    protected location  : 0,
+    protected funcName  : '',
 
-        if (isMatrix) {
+    public constructor: func(object shader, string srcName, finite type = self::INT, finite parts = 1, finite layout = self::VALUE) {
+
+        this.shader     = shader;
+        this.srcName    = srcName;
+        this.parts      = parts;
+        this.isFloat    = type === self::FLOAT;
+        this.isMatrix   = layout === self::MATRIX;
+        this.isArray    = layout === self::ARRAY;
+        this.location   = shader.radiant.gl.getUniformLocation(shader.program, srcName);
+
+        if (this.isMatrix) {
             assert(parts >= 2 && parts <= 4);
-            assert(isFloat === true);
+            assert(this.isFloat === true);
             this.funcName = 'uniformMatrix' + parts + 'fv';
+        } else if (this.isArray) {
+            assert(parts >= 1 && parts <= 4);
+            this.funcName = 'uniform' + parts + (this.isFloat ? 'f' : 'i') + 'v';
         } else {
             assert(parts >= 1 && parts <= 4);
-            this.funcName = 'uniform' + parts + (isFloat ? 'f' : 'i') + (parts > 1 ? 'v' : '');
+            this.funcName = 'uniform' + parts + (this.isFloat ? 'f' : 'i');
         }
     },
 
-    value: prop {
+    public name: prop {
+        get: func() {
+            return this.srcName;
+        }
+    },
+
+    public value: prop {
         set: func(val) {
             assert(this.parts === 1 || (this.isFloat && val instanceof Float32Array) || (this.isFloat === false && val instanceof Int32Array));
             assert(this.parts > 1 || isFinite(val));
-            storage = val;            
+            storage = val;
             if (this.shader.radiant.currentShader === this.shader) {
                 this.use();
             }
@@ -65,18 +85,29 @@ module Uniform = proto {
         }
     },
 
-    use: func() {
+    public use: func() {
 
         var gl = this.shader.radiant.gl;
+        var parts = this.parts;
 
         if (this.isMatrix) {
             gl[this.funcName](this.location, false, this.value);
-        } else {
+        } else if (this.isArray) {
             gl[this.funcName](this.location, this.value);
+        } else {
+            if (parts === 1) {
+                gl[this.funcName](this.location, this.value);
+            } else if (parts === 2) {
+                gl[this.funcName](this.location, this.value[0], this.value[1]);
+            } else if (parts === 3) {
+                gl[this.funcName](this.location, this.value[0], this.value[1], this.value[2]);
+            } else if (parts === 4) {
+                gl[this.funcName](this.location, this.value[0], this.value[1], this.value[2], this.value[3]);
+            }
         }
     },
 
-    restoreContext: func() {
+    public restoreContext: func() {
 
         var gl = this.shader.radiant.gl;
         this.location = gl.getUniformLocation(this.shader.program, this.srcName);
