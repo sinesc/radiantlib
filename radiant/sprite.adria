@@ -21,7 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Listenable = require('astd/listenable');
-var TextureImage = require('./texture/image');
+var TextureFile = require('./texture/file');
 var Frame = require('./sprite/frame');
 var Parameter = require('./sprite/parameter');
 
@@ -98,14 +98,8 @@ module Sprite = proto (Listenable) {
 
         // load image
 
-        var that = this;
-        var image = document.createElement('img');
-        image.src = params.file;
-
-        image.addEventListener('load', func listener() {
-            image.removeEventListener('load', listener);
-            that.generate(image, params);
-        });
+        this.texture = new TextureFile(this.radiant, params.file);
+        this.texture.once('load', [ params ], this, this.generate);
     },
 
     /**
@@ -133,16 +127,11 @@ module Sprite = proto (Listenable) {
     },
 
     /**
-     * called by constructor once the sprite's image is loaded, computes sprite frames
+     * called by constructor once the sprite's texture is loaded, computes sprite frames
      *
-     * @param Image image
      * @param Parameter params
      */
-    protected generate: func(object image, Parameter params) {
-
-        // create texture
-
-        this.texture = new TextureImage(this.radiant, image);
+    protected generate: func(Parameter params) {
 
         // try layout auto-detection
 
