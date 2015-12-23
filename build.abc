@@ -1,26 +1,9 @@
 {
-    "debug": false,
-    "mode": "adria",
-    "stdin": false,
-    "cache": true,
     "files": [
         "radiant.adria"
     ],
     "outFile": "./bin/radiant.js",
-    "basePath": "./",
     "paths": [ "../astdlib/" ],
-    "extension": ".adria",
     "platform": "web",
-    "headerFile": "./LICENSE",
-    "defines": {},
-    "shellwrap": false,
-    "shellargs": "",
-    "monitor": false,
-    "strict": true,
-    "es5": false,
-    "assert": false,
-    "scan": true,
-    "map": false,
-    "link": true,
-    "time": false
+    "headerFile": "./LICENSE"
 }

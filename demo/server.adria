@@ -28,7 +28,7 @@ var path = require('path');
 
 // server configuration
 
-var listenPort = 80;
+var listenPort = 8080;
 var documentRoot = './www/';
 var monitoredFiles = [ './demo.abc' ];
 
@@ -50,7 +50,7 @@ var compile = func(file) {
 
     var child = cp.execFile(
         'adria',
-        [ '-c', path.basename(file) ],
+        [ '-c', path.basename(file), '--monitor', '--poll' ],
         { cwd: path.dirname(file) }
     );
 
