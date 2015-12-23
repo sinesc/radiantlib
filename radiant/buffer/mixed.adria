@@ -1,0 +1,64 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var Buffer = require('../buffer');
+
+module MixedBuffer = proto (Buffer) {
+
+    /**
+     * webgl target binding
+     */
+    protected target: self::ARRAY_BUFFER,
+
+    /**
+     * webgl draw mode
+     */
+    protected mode: self::DYNAMIC_DRAW,
+
+    /**
+     * uint32 array pointing into shared buffer
+     */
+    protected intView: null,
+
+    /**
+     * float32 array pointing into shared buffer
+     */
+    protected floatView: null,
+
+    /**
+     * index buffer constructor
+     *
+     * @param object radiant
+     * @param integer quadSize
+     */
+    public constructor: func(object radiant, finite quadSize) {
+
+        this.floatView = new Float32Array(quadSize);
+        this.intView = new Uint32Array(this.floatView.buffer);
+
+        Buffer->constructor(radiant, this.floatView);
+
+        this.size = quadSize;
+    },
+
+    //!todo add changed-flag for particles, then make particles renderer not bufferSubData unless buffer actually changed
+};

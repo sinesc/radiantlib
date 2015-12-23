@@ -1,0 +1,128 @@
+/*
+ * radiant 2d webgl rendering engine
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var GL = window.WebGLRenderingContext;
+
+module Buffer = proto {
+
+    /**
+     * relevant gl constants
+     */
+    public ARRAY_BUFFER         : GL.ARRAY_BUFFER,
+    public ELEMENT_ARRAY_BUFFER : GL.ELEMENT_ARRAY_BUFFER,
+    public DYNAMIC_DRAW         : GL.DYNAMIC_DRAW,
+    public STATIC_DRAW          : GL.STATIC_DRAW,
+
+    /**
+     * radiant reference
+     */
+    public radiant: null,
+
+    /**
+     * number of indexed rectangles
+     */
+    public size: 0,
+
+    /**
+     * buffer data array
+     */
+    protected data: null,
+
+    /**
+     * webgl target buffer
+     */
+    protected buffer: null,
+
+    /**
+     * webgl target binding
+     */
+    protected target: self::ARRAY_BUFFER,
+
+    /**
+     * webgl draw mode
+     */
+    protected mode: self::DYNAMIC_DRAW,
+
+    /**
+     * index buffer constructor
+     *
+     * @param object radiant
+     * @param object bufferdata
+     */
+    public constructor: func(object radiant, object bufferdata) {
+
+        this.radiant = radiant;
+        this.buffer = null;
+        this.data = bufferdata;
+        this.radiant.on('contextrestored', this, this.restoreContext);
+        this.restoreContext();
+    },
+
+    /**
+     * clean up buffers and listeners
+     */
+    public destroy: func() {
+
+        this.radiant.off('contextrestored', this, this.restoreContext);
+        this.radiant.gl.deleteBuffer(this.buffer);
+    },
+
+    /**
+     * restore webgl context after context loss
+     */
+    public restoreContext: func() {
+
+        var gl = this.radiant.gl;
+
+        this.buffer = gl.createBuffer();
+        gl.bindBuffer(this.target, this.buffer);
+        gl.bufferData(this.target, this.data, this.mode);
+    },
+
+    /**
+     * bind buffer
+     */
+    public use: func() {
+
+        this.radiant.gl.bindBuffer(this.target, this.buffer);
+    },
+
+    /**
+     * bind buffer and apply local buffer data to webgl buffer
+     *
+     * @param finite from
+     * @param finite to
+     */
+    public upload: func(finite? from = -1, finite? to = -1) {
+
+        var gl = this.radiant.gl;
+        gl.bindBuffer(this.target, this.buffer);
+
+        if (from === -1 && to === -1) {
+            gl.bufferSubData(this.target, 0, this.data);
+        } else if (to === -1) {
+            gl.bufferSubData(this.target, from, this.data.subarray(from));  //!todo check whether buffersubdata offset is in bytes or buffer elements (this.data.BYTES_PER_ELEMENT)
+        } else {
+            gl.bufferSubData(this.target, from, this.data.subarray(from, to)); //!todo see above and ask santa for non-sucking webgl docs
+        }
+    }
+};
