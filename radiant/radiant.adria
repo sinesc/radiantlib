@@ -52,6 +52,11 @@ module Radiant = proto (Listenable) {
     public currentArrayBuffer: null,
 
     /**
+     * increased for each webgl draw call
+     */
+    public debugGLDrawCount: 0,
+
+    /**
      * construct new radiant context
      *
      * @param finite width
@@ -59,16 +64,21 @@ module Radiant = proto (Listenable) {
      * @param boolean transparent create transparent gl context
      * @param boolean antialiasing
      * @param HTMLCanvasElement canvas
+     * @param object if specified, object to receive references to canvas and gl, triggers use of WebGLDebugUtils if loaded
      */
-    public constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, canvas = null) {
+    public constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, object? canvas = null, object? debug = null) {
 
         if (canvas !== null) {
             this.canvas = canvas;
         } else {
             this.canvas = document.createElement('canvas');
 
-//this.canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(this.canvas);
-//window.rcanvas = this.canvas;
+            if (debug !== null) {
+                if (WebGLDebugUtils) {
+                    this.canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(this.canvas);
+                }
+                debug.canvas = this.canvas;
+            }
 
             if (transparent !== true) {
                 this.canvas.setAttribute('moz-opaque', '');
@@ -100,7 +110,12 @@ module Radiant = proto (Listenable) {
             }
         }
 
-//this.gl = WebGLDebugUtils.makeDebugContext(this.gl);
+        if (debug !== null) {
+            if (WebGLDebugUtils) {
+                this.gl = WebGLDebugUtils.makeDebugContext(this.gl);
+            }
+            debug.gl = this.gl;
+        }
 
         this.index = new IndexBuffer(this);
         this.setupBlendModes();

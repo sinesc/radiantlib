@@ -6,5 +6,6 @@
     "basePath": "../",
     "paths": [ "../astdlib/", "./" ],
     "platform": "web",
-    "headerFile": "./LICENSE"
+    "headerFile": "./LICENSE",
+    "map": true
 }

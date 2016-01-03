@@ -41,8 +41,9 @@ module Particle = proto (Shader) {
      * uniforms
      */
     protected uMatrix         : null,
-    protected uNow            : null,
+    protected uScreenOffset   : null,
     protected uTexture        : null,
+    protected uNow            : null,
     protected uRamp           : null,
 
     /**

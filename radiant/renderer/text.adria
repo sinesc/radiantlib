@@ -118,7 +118,9 @@ module Text = proto (Renderer) {
             floatView[index++] = rotation;
 
             offsetX0 += characterWidth;
-            this.size++;
+            ++this.size;
         }
+
+        ++this.debugItemDrawCount;
     },
 };

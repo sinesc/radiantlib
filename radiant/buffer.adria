@@ -43,6 +43,11 @@ module Buffer = proto {
     public size: 0,
 
     /**
+     * disables upload if false
+     */
+    public dirty: true,
+
+    /**
      * buffer data array
      */
     protected data: null,
@@ -51,6 +56,7 @@ module Buffer = proto {
      * webgl target buffer
      */
     protected buffer: null,
+    protected bufferSize: 0,
 
     /**
      * webgl target binding
@@ -90,39 +96,73 @@ module Buffer = proto {
      * restore webgl context after context loss
      */
     public restoreContext: func() {
-
-        var gl = this.radiant.gl;
-
-        this.buffer = gl.createBuffer();
-        gl.bindBuffer(this.target, this.buffer);
-        gl.bufferData(this.target, this.data, this.mode);
+        this.bufferSize = -1;
+        this.syncBuffer();
     },
 
     /**
-     * bind buffer
+     * bind buffer, uploads data if dirty
      */
     public use: func() {
 
-        this.radiant.gl.bindBuffer(this.target, this.buffer);
+        if (this.dirty) {
+            this.upload();
+        } else {
+            this.radiant.gl.bindBuffer(this.target, this.buffer);
+        }
     },
 
     /**
-     * bind buffer and apply local buffer data to webgl buffer
+     * bind buffer and copy data to it
      *
-     * @param finite from
-     * @param finite to
+     * @param finite from if specified, dirty needs to be unset manually
+     * @param finite to if specified, dirty needs to be unset manually
      */
     public upload: func(finite? from = -1, finite? to = -1) {
+
+        if (this.syncBuffer()) {
+            return;
+        }
 
         var gl = this.radiant.gl;
         gl.bindBuffer(this.target, this.buffer);
 
         if (from === -1 && to === -1) {
             gl.bufferSubData(this.target, 0, this.data);
+            this.dirty = false;
         } else if (to === -1) {
-            gl.bufferSubData(this.target, from, this.data.subarray(from));  //!todo check whether buffersubdata offset is in bytes or buffer elements (this.data.BYTES_PER_ELEMENT)
+            gl.bufferSubData(this.target, from * this.data.BYTES_PER_ELEMENT, this.data.subarray(from));
         } else {
-            gl.bufferSubData(this.target, from, this.data.subarray(from, to)); //!todo see above and ask santa for non-sucking webgl docs
+            gl.bufferSubData(this.target, from * this.data.BYTES_PER_ELEMENT, this.data.subarray(from, to));
         }
-    }
+    },
+
+    /**
+     * ensures webgl buffer exists and is of sufficient size to hold data. creates and fills buffer
+     * if either criterium was not met
+     *
+     * @return boolean false if buffer exists and has sufficient size
+     */
+    protected syncBuffer: func() {
+
+        var gl = this.radiant.gl;
+        var expectedSize = this.data.length * this.data.BYTES_PER_ELEMENT;
+
+        if (this.bufferSize !== expectedSize) {
+
+            if (this.buffer !== null) {
+                gl.deleteBuffer(this.buffer);
+            }
+
+            this.buffer = gl.createBuffer();
+            gl.bindBuffer(this.target, this.buffer);
+            gl.bufferData(this.target, this.data, this.mode);
+            
+            this.bufferSize = expectedSize;
+            this.dirty = false;
+            return true;
+        }
+
+        return false;
+    },
 };

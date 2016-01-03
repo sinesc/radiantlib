@@ -22,46 +22,49 @@
  */
 var Renderer = require('../renderer');
 var Particle = require('../shader/particle');
-import Map;
 
 module Particles = proto (Renderer) {
 
     protected Shader: Particle,
     protected textureUnit: 2,
     protected rampUnit: 3,
-
     protected ramp: null,
-    protected emitters: null,
-
-    /**
-     * don't remove particles after draw
-     */
-    protected drawResets: false,
-
-    /**
-     * creates a new particle renderer
-     *
-     * @param Radiant radiant
-     */
-    public constructor: func(object radiant) {
-
-        Renderer->constructor(radiant);
-        this.emitters = new Map();
-    },
 
     /**
      * add an emitter
      *
      * @param BlendMode blendMode
      * @param Emitter emitter
+     * @param finite localTime local particlespace time
      * @param finite x
      * @param finite y
      */
-    public add: func(object blendMode, object emitter, finite x, finite y) {
+    public add: func(object blendMode, object emitter, finite localTime, finite x, finite y) {
 
-        this.setupState(blendMode, emitter.texture, emitter.ramp);
-        this.vertices.floatView.set(emitter.data, this.size * 4);
-        this.size += emitter.size;
+        this.blendMode  = blendMode;
+        this.texture    = emitter.texture;
+        this.ramp       = emitter.ramp;
+        this.vertices   = emitter.vertices;
+        this.size       = emitter.size;
+
+        //!todo ugly, needs concept
+
+        this.screenOffsetX += x;
+        this.screenOffsetY += y;
+        this.shader.uNow.value = localTime;
+        this.draw();
+        this.screenOffsetX -= x;
+        this.screenOffsetY -= y;
+
+        ++this.debugItemDrawCount;
+    },
+
+    /**
+     * upload vertices to gl buffer
+     */
+    protected uploadVertices: func() {
+
+        this.vertices.use();
     },
 
     /**
@@ -74,28 +77,19 @@ module Particles = proto (Renderer) {
     },
 
     /**
-     * set up drawing state for given texture and current blendmode
-     *
-     * @param BlendMode blendMode
-     * @param Texture texure
-     * @param Texture ramp
-     */
-    protected setupState: func(object blendMode, object texture, object ramp) {
-
-        if (this.blendMode !== blendMode || this.texture !== texture || this.ramp !== ramp) {
-            this.draw();
-            this.blendMode = blendMode;
-            this.texture = texture;
-            this.ramp = ramp;
-        }
-    },
-
-    /**
      * assign sampler unit for ramp texture
      */
     protected setupUniforms: func() {
 
         Renderer->setupUniforms();
         this.shader.uRamp.value = this.rampUnit;
+    },
+
+    /**
+     * overrides vertex buffer initialization. particler renderer doesn't need its own buffer
+     */
+    protected initVertices: func() {
+        
+        this.vertices = null;
     },
 };

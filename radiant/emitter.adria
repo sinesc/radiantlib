@@ -20,17 +20,25 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var Listenable = require('astd/listenable');
 var Renderer = require('./renderer');
-var Texture = require('./texture');
+var TextureFile = require('./texture/file');
+var TextureRamp = require('./texture/ramp');
 var Color = require('./color');
+var MixedBuffer = require('./buffer/mixed');
 
-module Emitter = proto {
+/**
+ * individual particle emitter
+ *
+ * @event load()
+ */
+module Emitter = proto (Listenable) {
 
     public texture  : null,
     public ramp     : null,
-    public data     : null,
+    public vertices : null,
     public size     : 0,
-    public baseTime : 0,
+    public ready    : false,
 
     protected renderer: null,
 
@@ -55,20 +63,47 @@ module Emitter = proto {
         color       : Color.WHITE
     },
 
-    public constructor: func(Renderer renderer, Texture texture, Texture ramp) {
+    /**
+     * create new particle emitter
+     *
+     * @param Renderer renderer a particle renderer
+     * @param string textureFile texture to use for particles
+     * @param Array rampData array of colors used to build a ramp texture
+     */
+    public constructor: func(Renderer renderer, string textureFile, Array rampData) {
+
         this.renderer = renderer;
-        this.texture = texture;
-        this.ramp = ramp;
+
+        this.texture = new TextureFile(renderer.radiant, textureFile);
+        this.texture.once('load', this, this.generate);
+
+        this.ramp = new TextureRamp(renderer.radiant, rampData);
     },
 
+    /**
+     * called by constructor once the emitter's texture is loaded
+     */
+    protected generate: func() {
+
+        this.ready = true;
+        this.execute('load');
+    },
+
+    /**
+     * add particles to the emitter
+     *
+     * @param finite particles number of particles to add
+     * @param object rawOptions particle creation options
+     */
     public createParticles: func(finite particles, object rawOptions) {
 
         var corners = this.corners;
         var range = this.range;
         var options = this.normalizeOptions(rawOptions);
-        var fdata = new Float32Array(particles * this.renderer.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
-        var idata = new Uint32Array(fdata.buffer);
-        var index = 0;
+
+        var index = this.growBuffer(particles) * this.renderer.shader.attributeSize;
+        var fdata = this.vertices.floatView;
+        var idata = this.vertices.intView;
 
         for (var particle = 0; particle < particles; ++particle) {
 
@@ -102,8 +137,7 @@ module Emitter = proto {
             }
         }
 
-        this.data = fdata;
-        this.size = particles;
+        this.vertices.dirty = true;
     },
 
     protected range: func(Array values) {
@@ -112,20 +146,44 @@ module Emitter = proto {
         return Math.random() * distance + values[0];
     },
 
+    protected growBuffer: func(finite particles) {
+
+        if (this.vertices === null) {
+            this.vertices = new MixedBuffer(this.renderer.radiant, particles * this.renderer.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
+        } else {
+            this.vertices.resize(this.vertices.size + particles * this.renderer.shader.attributeSize);
+        }
+
+        var oldSize = this.size;
+        this.size += particles;
+        return oldSize;
+    },
+
     protected normalizeOptions: func(object options) {
 
         var result = Object.create(null);
 
         for (var field, defaultValue in this.defaults) {
 
-            var item = new Array(2);
+            var item;
 
-            if (options[field] instanceof Array) {
-                item[0] = options[field].length > 0 ? options[field][0] : defaultValue;
-                item[1] = options[field].length > 1 ? options[field][1] : defaultValue;
+            if (field === 'color') {
+                item = options[field] === undefined ? [ Color.WHITE ] : (options[field] instanceof Array ? options[field] : [ options[field] ]);
+            } else if (options[field] instanceof Array) {
+                item = [
+                    options[field].length > 0 ? options[field][0] : defaultValue,
+                    options[field].length > 1 ? options[field][1] : defaultValue,
+                ];
+            } else if (options[field] === undefined) {
+                item = [
+                    defaultValue,
+                    defaultValue,
+                ];
             } else {
-                item[0] = options[field];
-                item[1] = options[field];
+                item = [
+                    options[field],
+                    options[field],
+                ];
             }
 
             result[field] = item;

@@ -23,9 +23,13 @@
 var Color = require('./color');
 var Text = require('./renderer/text');
 var Sprites = require('./renderer/sprites');
+var Particles = require('./renderer/particles');
 var util = require('astd/util');
 
-var PoolItem = proto {
+var Sprite = require('./sprite');
+var Emitter = require('./emitter');
+
+var SpritePoolItem = proto {
     order       : 0,
     blendMode   : null,
     sprite      : null,
@@ -38,25 +42,31 @@ var PoolItem = proto {
     scaleY      : 0.0,
 };
 
+var EmitterPoolItem = proto {
+    blendMode   : null,
+    emitter     : null,
+    localTime   : 0.0,
+    x           : 0,
+    y           : 0,
+};
+
 module Scene = proto {
 
     protected ORDER_BLENDMODE: 1000,
     protected ORDER_LAYER: 10 * self::ORDER_BLENDMODE,
 
+    protected radiant: null,
     protected text: null,
     protected sprites: null,
+    protected particles: null,
 
-    protected radiant: null,
-    protected drawPool: null,
-    protected drawId: 0,
+    protected spritePool: null,
+    protected emitterPool: null,
+    protected spriteId: 0,
+    protected emitterId: 0,
 
     public screenOffsetX: 0,
     public screenOffsetY: 0,
-
-    /**
-     * increased for each item to draw
-     */
-    protected debugDrawCount: 0,
 
     /**
      * creates a new scene
@@ -69,11 +79,14 @@ module Scene = proto {
         this.radiant = radiant;
         this.text = new Text(this.radiant);
         this.sprites = new Sprites(this.radiant);
+        this.particles = new Particles(this.radiant);
 
-        this.drawPool = [ ];
+        this.spritePool = [ ];
+        this.emitterPool = [ ];
 
         for (var i = 0; i < poolSize; i++) {
-            this.drawPool[i] = new PoolItem();
+            this.spritePool[i] = new SpritePoolItem();
+            this.emitterPool[i] = new EmitterPoolItem();
         }
     },
 
@@ -103,7 +116,7 @@ module Scene = proto {
      * @param finite scaleX
      * @param finite scaleY
      */
-    public addSprite: func(finite layer, object blendMode, object sprite, finite frameId, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
+    public addSprite: func(finite layer, object blendMode, Sprite sprite, finite frameId, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
 
         if (sprite.ready !== true) {
             return;
@@ -111,8 +124,8 @@ module Scene = proto {
 
         // grab a pre-created array from the pool and fill it with the sprite parameters
 
-        var drawId = this.drawId++;
-        var poolItem = this.drawPool[drawId];
+        var spriteId = this.spriteId++;
+        var poolItem = this.spritePool[spriteId];
         var textureId = sprite.texture.id;
         var order = layer * this.ORDER_LAYER + blendMode.order * this.ORDER_BLENDMODE + textureId;
 
@@ -123,33 +136,67 @@ module Scene = proto {
         poolItem.x          = parseInt(x);
         poolItem.y          = parseInt(y);
         poolItem.color      = parseInt(typeof color === 'number' ? color : color.value);
-        poolItem.rotation   = rotation;
-        poolItem.scaleX     = scaleX;
-        poolItem.scaleY     = scaleY;
+        poolItem.rotation   = parseFloat(rotation);
+        poolItem.scaleX     = parseFloat(scaleX);
+        poolItem.scaleY     = parseFloat(scaleY);
 
-        this.drawPool[drawId] = poolItem;
-        this.debugDrawCount++;
+        this.spritePool[spriteId] = poolItem;
     },
 
-    protected sortSprites: func() {
+    /**
+     * adds a particle emitter to the scene
+     *
+     * @param object blendMode
+     * @param Emitter emitter
+     * @param finite localTime
+     * @param integer x
+     * @param integer x
+     */
+    public addEmitter: func(object blendMode, Emitter emitter, finite localTime, finite x, finite y) {
 
-        util.flashSortObjects(this.drawPool, this.drawId);
+        if (emitter.ready !== true) {
+            return;
+        }
+
+        var emitterId = this.emitterId++;
+        var poolItem = this.emitterPool[emitterId];
+
+        poolItem.blendMode  = blendMode;
+        poolItem.emitter    = emitter;
+        poolItem.localTime  = parseFloat(localTime);
+        poolItem.x          = parseInt(x);
+        poolItem.y          = parseInt(y);
+
+        this.emitterPool[emitterId] = poolItem;
     },
 
+    /**
+     * draws the scene
+     */
     public draw: func() {
 
-        var drawPool = this.drawPool;
-        var drawId = this.drawId;
+        // draw sprites
 
-        this.sortSprites();
+        util.flashSortObjects(this.spritePool, this.spriteId);
         this.sprites.setScreenOffset(this.screenOffsetX, this.screenOffsetY);
 
-        for (var i = 0; i < drawId; ++i) {
-            var arg = drawPool[i];
+        for (var i = 0; i < this.spriteId; ++i) {
+            var arg = this.spritePool[i];
             this.sprites.add(arg.blendMode, arg.sprite, arg.frameId, arg.x, arg.y, arg.color, arg.rotation, arg.scaleX, arg.scaleY);
         }
 
         this.sprites.draw();
-        this.drawId = 0;
+        this.spriteId = 0;
+
+        // draw particles (!todo no layers)
+
+        this.particles.setScreenOffset(this.screenOffsetX, this.screenOffsetY);
+
+        for (var i = 0; i < this.emitterId; ++i) {
+            var arg = this.emitterPool[i];
+            this.particles.add(arg.blendMode, arg.emitter, arg.localTime, arg.x, arg.y);
+        }
+
+        this.emitterId = 0;
     },
 };

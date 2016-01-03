@@ -33,11 +33,6 @@ module Renderer = proto {
     public size: 0,
 
     /**
-     * reset size after draw
-     */
-    protected drawResets: true,
-
-    /**
      * @var MixedBuffer vertices, 4 per rectangle
      */
     public vertices: null,
@@ -56,12 +51,17 @@ module Renderer = proto {
     protected textureUnit: 0,
 
     /**
-     * increased for each webgl draw call
+     * global screen offsets
      */
-    public debugDrawCount: 0,
-
     public screenOffsetX: 0,
     public screenOffsetY: 0,
+
+    /**
+     * debug statistics
+     */
+    public debugGLDrawCount: 0,
+    public debugItemDrawCount: 0,
+
 
     /**
      * creates a new renderer
@@ -73,15 +73,21 @@ module Renderer = proto {
         this.radiant = radiant;
         this.shader = new this.Shader(radiant);
 
-        // set up vertex-indices for each rectangle
+        // set up vertices
 
-        this.vertices = new MixedBuffer(radiant, radiant.index.size * this.shader.attributeSize /* / 4 * 4  */);
-
+        this.initVertices();
         this.restoreContext();
         this.setupUniforms();
 
         this.radiant.on('contextrestored', this, this.restoreContext);
         this.radiant.on('resize', this, this.setupUniforms);
+    },
+
+    /**
+     * initializes vertex buffer
+     */
+    protected initVertices: func() {
+        this.vertices = new MixedBuffer(this.radiant, this.radiant.index.size * this.shader.attributeSize /* / 4 * 4  */);
     },
 
     /**
@@ -121,23 +127,29 @@ module Renderer = proto {
             return false;
         }
 
-        // update vertex data in gl buffers, set screen offset
+        // use shader, texture,...
 
-        this.vertices.upload(0, this.size * this.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
+        this.uploadVertices();
         this.shader.uScreenOffset.value[0] = this.screenOffsetX;
         this.shader.uScreenOffset.value[1] = this.screenOffsetY;
+        this.shader.uScreenOffset.dirty = true;
         this.useResources();
 
         // draw 2 triangles = 6 indices / 4 unique vertices per rectangle
 
         this.radiant.gl.drawElements(this.radiant.gl.TRIANGLES, this.size * 6, this.radiant.gl.UNSIGNED_SHORT, 0);
-
-        if (this.drawResets) {
-            this.size = 0;
-        }
-
-        this.debugDrawCount++;
+        this.debugGLDrawCount++;
+        this.radiant.debugGLDrawCount++;
+        this.size = 0;
         return true;
+    },
+
+    /**
+     * upload vertices to gl buffer
+     */
+    protected uploadVertices: func() {
+
+        this.vertices.upload(0, this.size * this.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
     },
 
     /**

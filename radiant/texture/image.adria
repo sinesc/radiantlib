@@ -65,7 +65,7 @@ module TextureImage = proto (Texture) {
     },
 
     /**
-     * converts array of given x/y coodinate into texture uv coordinate
+     * converts given x/y coodinate into texture uv coordinate
      *
      * @param finite x
      * @param finite y
@@ -73,5 +73,13 @@ module TextureImage = proto (Texture) {
      */
     public getUV: func(finite x, finite y) {
         return [ x / this.canvas.width, y / this.canvas.height ];
+    },
+
+    public getMaxU: func() {
+        return this.width / this.canvas.width;
+    },
+
+    public getMaxV: func() {
+        return this.height / this.canvas.height;
     },
 };

@@ -33,8 +33,7 @@ void main() {
 
     // compute vertex position/rotation
 
-    float size = mix(aStartSize, aEndSize, progress);
-    size = (progress < 0.0 || progress > 1.0) ? 0.0 : size;
+    float size = (progress < 0.0 || progress > 1.0) ? 0.0 : mix(aStartSize, aEndSize, progress);
 
     vec2 sizedCorner;
     float sinRotation = sin(aRotation);
@@ -44,7 +43,7 @@ void main() {
 
     // motion offset
 
-    float travelledDistance = (aVelocity * elapsed) + (0.5 * aAcceleration * pow(elapsed, 2.0));
+    float travelledDistance = (aVelocity * elapsed) + (0.5 * aAcceleration * (elapsed * elapsed));
     vec2 offsetOrigin;
     offsetOrigin.x = aOrigin.x + cos(aAngle) * travelledDistance;
     offsetOrigin.y = aOrigin.y + sin(aAngle) * travelledDistance;

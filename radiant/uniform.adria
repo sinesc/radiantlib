@@ -69,6 +69,22 @@ module Uniform = proto {
         }
     },
 
+    /**
+     * @var boolean allow shader use even if it is the current shader, resets after use
+     */
+    public dirty: prop {
+
+        get: func() {
+            return storage;
+        },
+        set: func(value) {
+            storage = value;
+            if (value) {
+                this.shader.dirty = true;
+            }
+        }
+    },
+
     public value: prop {
         set: func(val) {
             assert(this.parts === 1 || (this.isFloat && val instanceof Float32Array) || (this.isFloat === false && val instanceof Int32Array));
@@ -76,6 +92,8 @@ module Uniform = proto {
             storage = val;
             if (this.shader.radiant.currentShader === this.shader) {
                 this.use();
+            } else {
+                this.dirty = true;
             }
         },
         get: func() {
@@ -105,6 +123,8 @@ module Uniform = proto {
                 gl[this.funcName](this.location, this.value[0], this.value[1], this.value[2], this.value[3]);
             }
         }
+
+        this.dirty = false;
     },
 
     public restoreContext: func() {

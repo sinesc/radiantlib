@@ -37,12 +37,12 @@ module MixedBuffer = proto (Buffer) {
     /**
      * uint32 array pointing into shared buffer
      */
-    protected intView: null,
+    public intView: null,
 
     /**
      * float32 array pointing into shared buffer
      */
-    protected floatView: null,
+    public floatView: null,
 
     /**
      * index buffer constructor
@@ -60,5 +60,24 @@ module MixedBuffer = proto (Buffer) {
         this.size = quadSize;
     },
 
-    //!todo add changed-flag for particles, then make particles renderer not bufferSubData unless buffer actually changed
+    /**
+     * resize buffer to new size, updates floatView and intView references
+     *
+     * @param finite newQuadSize
+     */
+    public resize: func(finite newQuadSize) {
+
+        if (ArrayBuffer.transfer) {
+            var newBuffer = ArrayBuffer.transfer(this.data.buffer, newQuadSize * 4);
+            this.floatView = this.data = new Float32Array(newBuffer);
+        } else {
+            var data = new Float32Array(newQuadSize);
+            data.set(this.floatView);
+            this.floatView = this.data = data;
+        }
+
+        this.intView = new Uint32Array(this.floatView.buffer);
+        this.size = newQuadSize;
+        this.dirty = true;
+    },
 };

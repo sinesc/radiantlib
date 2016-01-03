@@ -7,5 +7,6 @@
     "paths": [ "../astdlib/" ],
     "platform": "node",
     "headerFile": "./LICENSE",
-    "shellwrap": true
+    "shellwrap": true,
+    "map": true
 }

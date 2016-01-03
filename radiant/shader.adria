@@ -108,15 +108,30 @@ module Shader = proto {
      */
     public use: func() {
 
-        if (this.radiant.currentShader === this) {
-            return;
+        if (this.radiant.currentShader !== this) {
+            this.useProgram();
+            this.useAttributes();
         }
 
-        this.useProgram();
-        this.useAttributes();
-        this.useUniforms();
+        if (this.dirty || this.radiant.currentShader !== this) {
+            this.useUniforms();
+        }
 
+        this.dirty = false;
         this.radiant.currentShader = this;
+    },
+
+    /**
+     * @var boolean allow shader use even if it is the current shader, resets after use
+     */
+    public dirty: prop {
+
+        get: func() {
+            return storage;
+        },
+        set: func(value) {
+            storage = value;
+        }
     },
 
     /**

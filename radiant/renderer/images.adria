@@ -22,81 +22,95 @@
  */
 var Renderer = require('../renderer');
 var Plain = require('../shader/plain');
+var Color = require('radiant/color');
 
-module Sprites = proto (Renderer) {
+module Images = proto (Renderer) {
 
     protected Shader: Plain,
 
     /**
-     * add a sprite to be drawn
+     * add an image to be drawn
      *
      * @param BlendMode blendMode
-     * @param Sprite sprite
-     * @param integer frameId
-     * @param finite x
-     * @param finite y
-     * @param finite color
+     * @param Texture texture
+     * @param finite sx
+     * @param finite sy
+     * @param finite sw
+     * @param finite sh
+     * @param finite dx
+     * @param finite dy
+     * @param finite dw
+     * @param finite dh
      * @param finite rotation
-     * @param finite scaleX
-     * @param finite scaleY
+     * @param finite color
      */
-    public add: func(object blendMode, object sprite, finite frameId, finite x, finite y, finite color, finite rotation, finite scaleX, finite scaleY) {
+    public add: func(object blendMode, object texture, [ finite sx = 0, finite sy = 0, finite sw = dw, finite sh = dh ], finite dx, finite dy, finite dw, finite dh, [ finite rotation = 0.0, finite color = Color.WHITE ]) {
 
-        this.setupState(blendMode, sprite.texture);
+        this.setupState(blendMode, texture);
 
         var index = this.size * this.shader.attributeSize;
         var floatView = this.vertices.floatView;
         var intView = this.vertices.intView;
-        var frame = sprite.frames[frameId];
 
-        // corner positions relative to x/y
+        // texture coordinates
 
-        var offsetX0 = (-sprite.anchorX) * scaleX;
-        var offsetX1 = (sprite.width - sprite.anchorX) * scaleX;
-        var offsetY0 = (-sprite.anchorY) * scaleY;
-        var offsetY1 = (sprite.height - sprite.anchorY) * scaleY;
+        var uMax = texture.getMaxU();
+        var vMax = texture.getMaxV();
+
+        var u0 = sx / texture.width * uMax;
+        var u1 = u0 + sw / texture.width * uMax;
+
+        var v0 = sy / texture.height * vMax;
+        var v1 = v0 + sh / texture.height * vMax;
+
+        // corner positions relative to dx/dy
+
+        var offsetX0 = 0;
+        var offsetX1 = dw;
+        var offsetY0 = 0;
+        var offsetY1 = dh;
 
         // bottom right
 
-        floatView[index++] = x;
-        floatView[index++] = y;
+        floatView[index++] = dx;
+        floatView[index++] = dy;
         floatView[index++] = offsetX1;
         floatView[index++] = offsetY1;
-        floatView[index++] = frame.u1;
-        floatView[index++] = frame.v1;
+        floatView[index++] = u1;
+        floatView[index++] = v1;
         intView[index++] = color;
         floatView[index++] = rotation;
 
         // bottom left
 
-        floatView[index++] = x;
-        floatView[index++] = y;
+        floatView[index++] = dx;
+        floatView[index++] = dy;
         floatView[index++] = offsetX0;
         floatView[index++] = offsetY1;
-        floatView[index++] = frame.u0;
-        floatView[index++] = frame.v1;
+        floatView[index++] = u0;
+        floatView[index++] = v1;
         intView[index++] = color;
         floatView[index++] = rotation;
 
         // top left
 
-        floatView[index++] = x;
-        floatView[index++] = y;
+        floatView[index++] = dx;
+        floatView[index++] = dy;
         floatView[index++] = offsetX0;
         floatView[index++] = offsetY0;
-        floatView[index++] = frame.u0;
-        floatView[index++] = frame.v0;
+        floatView[index++] = u0;
+        floatView[index++] = v0;
         intView[index++] = color;
         floatView[index++] = rotation;
 
         // top right
 
-        floatView[index++] = x;
-        floatView[index++] = y;
+        floatView[index++] = dx;
+        floatView[index++] = dy;
         floatView[index++] = offsetX1;
         floatView[index++] = offsetY0;
-        floatView[index++] = frame.u1;
-        floatView[index++] = frame.v0;
+        floatView[index++] = u1;
+        floatView[index++] = v0;
         intView[index++] = color;
         floatView[index++] = rotation;
 
