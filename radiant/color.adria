@@ -59,8 +59,6 @@ module Color = proto {
 
     value: 0,
 
-    //!todo premultiplication flag
-
     /**
      * constructor, takes 0, 1, 3 or 4 parameters
      *
@@ -77,10 +75,10 @@ module Color = proto {
      * color red value ranging from 0-255
      */
     r: prop {
-        set: func(color) {
+        set: func(finite color) {
             this.value = (this.value & rFilter) | (color << rPos);
         },
-        get: func(value) {
+        get: func() {
             return (this.value & rSelect) >>> rPos;
         },
     },
@@ -89,10 +87,10 @@ module Color = proto {
      * color green value ranging from 0-255
      */
     g: prop {
-        set: func(color) {
+        set: func(finite color) {
             this.value = (this.value & gFilter) | (color << gPos);
         },
-        get: func(value) {
+        get: func() {
             return (this.value & gSelect) >>> gPos;
         },
     },
@@ -101,10 +99,10 @@ module Color = proto {
      * color blue value ranging from 0-255
      */
     b: prop {
-        set: func(color) {
+        set: func(finite color) {
             this.value = (this.value & bFilter) | (color << bPos);
         },
-        get: func(value) {
+        get: func() {
             return (this.value & bSelect) >>> bPos;
         },
     },
@@ -113,10 +111,10 @@ module Color = proto {
      * alpha value ranging from 0-255
      */
     a: prop {
-        set: func(color) {
+        set: func(finite color) {
             this.value = (this.value & aFilter) | (color << aPos);
         },
-        get: func(value) {
+        get: func() {
             return (this.value & aSelect) >>> aPos;
         },
     },
@@ -165,6 +163,14 @@ export alphaPM = func(finite a) {
     return a << rPos | a << gPos | a << bPos | a << aPos;
 };
 
+export getAlpha = func(finite color) {
+    return (color & aSelect) >>> aPos;
+};
+
+export setAlpha = func(finite color, finite a) {
+    return (color & aFilter) | (a << aPos);
+};
+
 /*
  * functions returning integer representation of given colors (range 0.0-1.0)
  */
@@ -184,6 +190,14 @@ export alpha1 = func(finite a) {
 export alphaPM1 = func(finite a) {
     a*=255;
     return a << rPos | a << gPos | a << bPos | a << aPos;
+};
+
+export getAlpha1 = func(finite color) {
+    return ((color & aSelect) >>> aPos) / 255;
+};
+
+export setAlpha1 = func(finite color, finite a) {
+    return (color & aFilter) | ((a*255) << aPos);
 };
 
 /**
