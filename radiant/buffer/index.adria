@@ -27,7 +27,7 @@ module IndexBuffer = proto (Buffer) {
     /**
      * webgl target binding
      */
-    protected target: self::ELEMENT_ARRAY_BUFFER,
+    protected target: self::INDEX_BUFFER,
 
     /**
      * webgl draw mode

@@ -48,7 +48,7 @@ module Radiant = proto (Listenable) {
     public currentTextures: null,
     public currentShader: null,
     public currentAttributeStates: null,
-    public currentElementBuffer: null,
+    public currentIndexBuffer: null,
     public currentArrayBuffer: null,
 
     /**

@@ -27,10 +27,10 @@ module Buffer = proto {
     /**
      * relevant gl constants
      */
-    public ARRAY_BUFFER         : GL.ARRAY_BUFFER,
-    public ELEMENT_ARRAY_BUFFER : GL.ELEMENT_ARRAY_BUFFER,
-    public DYNAMIC_DRAW         : GL.DYNAMIC_DRAW,
-    public STATIC_DRAW          : GL.STATIC_DRAW,
+    public ARRAY_BUFFER : GL.ARRAY_BUFFER,
+    public INDEX_BUFFER : GL.ELEMENT_ARRAY_BUFFER,
+    public DYNAMIC_DRAW : GL.DYNAMIC_DRAW,
+    public STATIC_DRAW  : GL.STATIC_DRAW,
 
     /**
      * radiant reference
@@ -110,6 +110,12 @@ module Buffer = proto {
         } else {
             this.radiant.gl.bindBuffer(this.target, this.buffer);
         }
+        
+        if (this.target === self::ARRAY_BUFFER) {
+            this.radiant.currentArrayBuffer = this;
+        } else {
+            this.radiant.currentIndexBuffer = this;
+        }
     },
 
     /**
@@ -157,7 +163,7 @@ module Buffer = proto {
             this.buffer = gl.createBuffer();
             gl.bindBuffer(this.target, this.buffer);
             gl.bufferData(this.target, this.data, this.mode);
-            
+
             this.bufferSize = expectedSize;
             this.dirty = false;
             return true;
