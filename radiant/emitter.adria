@@ -39,6 +39,7 @@ module Emitter = proto (Listenable) {
     public vertices : null,
     public size     : 0,
     public ready    : false,
+    public duration : 0.0,
 
     protected renderer: null,
 
@@ -137,6 +138,7 @@ module Emitter = proto (Listenable) {
             }
         }
 
+        this.duration = Math.max(this.duration, options.startTime[1] + options.timeToLive[1]);
         this.vertices.dirty = true;
     },
 
