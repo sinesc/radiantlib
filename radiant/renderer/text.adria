@@ -123,4 +123,10 @@ module Text = proto (Renderer) {
 
         ++this.debugItemDrawCount;
     },
+
+    protected setupUniforms: func() {
+
+        Renderer->setupUniforms();
+        this.shader.uTextureMaxUV.value = Float32Array.from([ 1.0, 1.0 ]);
+    },
 };

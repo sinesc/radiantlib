@@ -36,6 +36,7 @@ module Plain = proto (Shader) {
      */
     protected uMatrix: null,
     protected uTexture: null,
+    protected uTextureMaxUV: null,
 
     /**
      * register attributes and uniforms with the shader
@@ -51,5 +52,6 @@ module Plain = proto (Shader) {
         this.registerUniform('uMatrix', Shader::FLOAT, 4, Shader::UNIFORM_MATRIX);
         this.registerUniform('uScreenOffset', Shader::FLOAT, 2, Shader::UNIFORM_VALUE);
         this.registerUniform('uTexture', Shader::INT, 1);
+        this.registerUniform('uTextureMaxUV', Shader::FLOAT, 2, Shader::UNIFORM_VALUE);
     },
 };

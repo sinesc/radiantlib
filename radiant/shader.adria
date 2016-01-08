@@ -74,6 +74,11 @@ module Shader = proto {
     private uniforms: null,
 
     /**
+     * @var Buffer buffer for which the current attribute pointers are valid
+     */
+    private validAttributeBuffer: null,
+
+    /**
      * construct new shader
      *
      * @param Radiant radiant
@@ -108,17 +113,23 @@ module Shader = proto {
      */
     public use: func() {
 
-        if (this.radiant.currentShader !== this) {
+        var shaderChanged = this.radiant.currentShader !== this;
+
+        if (shaderChanged) {
             this.useProgram();
-            this.useAttributes();
+            this.radiant.currentShader = this;
         }
 
-        if (this.dirty || this.radiant.currentShader !== this) {
-            this.useUniforms();
+        if (shaderChanged || this.radiant.currentArrayBuffer !== this.validAttributeBuffer) {
+            this.useAttributes();
+            this.validAttributeBuffer = this.radiant.currentArrayBuffer;
+        }
+
+        if (shaderChanged || this.dirty) {
+            this.useUniforms(!shaderChanged);
         }
 
         this.dirty = false;
-        this.radiant.currentShader = this;
     },
 
     /**
@@ -211,12 +222,23 @@ module Shader = proto {
     /**
      * set uniforms for this shader
      */
-    private useUniforms: func() {
+    private useUniforms: func(onlyIfDirty = false) {
 
         var uniforms = this.uniforms;
 
-        for (var i = 0, num = uniforms.length; i < num; ++i) {
-            uniforms[i].use();
+        if (onlyIfDirty) {
+
+            for (var i = 0, num = uniforms.length; i < num; ++i) {
+                if (uniforms[i].dirty) {
+                    uniforms[i].use();
+                }
+            }
+
+        } else {
+
+            for (var i = 0, num = uniforms.length; i < num; ++i) {
+                uniforms[i].use();
+            }
         }
     },
 

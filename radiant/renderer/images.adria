@@ -118,4 +118,23 @@ module Images = proto (Renderer) {
 
         ++this.debugItemDrawCount;
     },
+
+    protected setupUniforms: func() {
+
+        Renderer->setupUniforms();
+        this.shader.uTextureMaxUV.value = Float32Array.from([ 1.0, 1.0 ]);
+    },
+
+    protected setupState: func(object blendMode, object texture) {
+
+        var textureChanged = this.texture !== texture;
+
+        Renderer->setupState(blendMode, texture);
+
+        if (textureChanged) {
+            this.shader.uTextureMaxUV.value[0] = texture.getMaxU();
+            this.shader.uTextureMaxUV.value[1] = texture.getMaxV();
+            this.shader.uTextureMaxUV.dirty = true;
+        }
+    },
 };
