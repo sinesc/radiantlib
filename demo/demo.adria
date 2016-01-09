@@ -76,7 +76,7 @@ var numLoaded = 0;
 
 var checkLoaded = func() {
     numLoaded++;
-    if (numLoaded === 3) {
+    if (numLoaded == 3) {
         renderFrame();
     }
 };

@@ -111,7 +111,7 @@ module Buffer = proto {
             this.radiant.gl.bindBuffer(this.target, this.buffer);
         }
         
-        if (this.target === self::ARRAY_BUFFER) {
+        if (this.target == self::ARRAY_BUFFER) {
             this.radiant.currentArrayBuffer = this;
         } else {
             this.radiant.currentIndexBuffer = this;
@@ -133,10 +133,10 @@ module Buffer = proto {
         var gl = this.radiant.gl;
         gl.bindBuffer(this.target, this.buffer);
 
-        if (from === -1 && to === -1) {
+        if (from == -1 && to == -1) {
             gl.bufferSubData(this.target, 0, this.data);
             this.dirty = false;
-        } else if (to === -1) {
+        } else if (to == -1) {
             gl.bufferSubData(this.target, from * this.data.BYTES_PER_ELEMENT, this.data.subarray(from));
         } else {
             gl.bufferSubData(this.target, from * this.data.BYTES_PER_ELEMENT, this.data.subarray(from, to));
@@ -154,9 +154,9 @@ module Buffer = proto {
         var gl = this.radiant.gl;
         var expectedSize = this.data.length * this.data.BYTES_PER_ELEMENT;
 
-        if (this.bufferSize !== expectedSize) {
+        if (this.bufferSize != expectedSize) {
 
-            if (this.buffer !== null) {
+            if (this.buffer != null) {
                 gl.deleteBuffer(this.buffer);
             }
 

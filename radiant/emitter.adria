@@ -150,7 +150,7 @@ module Emitter = proto (Listenable) {
 
     protected growBuffer: func(finite particles) {
 
-        if (this.vertices === null) {
+        if (this.vertices == null) {
             this.vertices = new MixedBuffer(this.renderer.radiant, particles * this.renderer.shader.attributeSize /* / 4 (floats) * 4 (corners) */);
         } else {
             this.vertices.resize(this.vertices.size + particles * this.renderer.shader.attributeSize);
@@ -169,14 +169,14 @@ module Emitter = proto (Listenable) {
 
             var item;
 
-            if (field === 'color') {
-                item = options[field] === undefined ? [ Color.WHITE ] : (options[field] instanceof Array ? options[field] : [ options[field] ]);
+            if (field == 'color') {
+                item = options[field] == undefined ? [ Color.WHITE ] : (options[field] instanceof Array ? options[field] : [ options[field] ]);
             } else if (options[field] instanceof Array) {
                 item = [
                     options[field].length > 0 ? options[field][0] : defaultValue,
                     options[field].length > 1 ? options[field][1] : defaultValue,
                 ];
-            } else if (options[field] === undefined) {
+            } else if (options[field] == undefined) {
                 item = [
                     defaultValue,
                     defaultValue,

@@ -127,7 +127,7 @@ module Images = proto (Renderer) {
 
     protected setupState: func(object blendMode, object texture) {
 
-        var textureChanged = this.texture !== texture;
+        var textureChanged = this.texture != texture;
 
         Renderer->setupState(blendMode, texture);
 

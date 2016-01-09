@@ -41,7 +41,7 @@ module BlendMode = proto {
 
         var radiant = this.radiant;
 
-        if (radiant.currentBlendMode !== this) {
+        if (radiant.currentBlendMode != this) {
             radiant.gl.blendFunc(this.source, this.destination);
         }
     },

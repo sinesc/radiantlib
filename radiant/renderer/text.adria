@@ -52,7 +52,7 @@ module Text = proto (Renderer) {
         var floatView = this.vertices.floatView;
         var intView = this.vertices.intView;
         var characters = font.characters;
-        var colorValue = typeof color === 'number' ? color : color.value;
+        var colorValue = typeof color == 'number' ? color : color.value;
 
         var offsetX0 = 0;
         var offsetY0 = 0;
@@ -62,7 +62,7 @@ module Text = proto (Renderer) {
 
             letter = text.substr(i, 1);
 
-            if (letter !== '\t') {
+            if (letter != '\t') {
                 character = characters[letter];
                 characterWidth = character.width;
             } else {

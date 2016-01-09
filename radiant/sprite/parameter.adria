@@ -44,7 +44,7 @@ module Parameter = proto {
 
     public constructor: func(string? file = null) {
 
-        if (file === null) {
+        if (file == null) {
             return;
         }
 
@@ -52,7 +52,7 @@ module Parameter = proto {
 
         var match = file.match(/_([0-9]+)x([0-9]+)x([0-9]+)\./);
 
-        if (match !== null) {
+        if (match != null) {
             this.width = parseInt(match[1]);
             this.height = parseInt(match[2]);
             this.count = parseInt(match[3]);

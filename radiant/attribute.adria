@@ -51,7 +51,7 @@ module Attribute = proto {
         this.location = gl.getAttribLocation(shader.program, srcName);
         this.size = parts * typeSize[type];
 
-        if (gl.isContextLost() === false && this.location === -1) {
+        if (gl.isContextLost() == false && this.location == -1) {
             throw new Exception('Error retrieving attribute location');
         }
     },
@@ -77,7 +77,7 @@ module Attribute = proto {
         var currentAttributeStates = radiant.currentAttributeStates;
 
         for (var i = start, num = currentAttributeStates.length; i < num; ++i) {
-            if (currentAttributeStates[i] === 1) {
+            if (currentAttributeStates[i] == 1) {
                 gl.disableVertexAttribArray(i);
                 currentAttributeStates[i] = 0;
             }

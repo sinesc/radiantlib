@@ -118,7 +118,7 @@ module Scene = proto {
      */
     public addSprite: func(finite layer, object blendMode, Sprite sprite, finite frameId, finite x, finite y, color = Color.WHITE, finite rotation = 0.0, finite scaleX = 1.0, finite scaleY = scaleX) {
 
-        if (sprite.ready !== true) {
+        if (sprite.ready != true) {
             return;
         }
 
@@ -135,7 +135,7 @@ module Scene = proto {
         poolItem.frameId    = parseInt(frameId);
         poolItem.x          = parseInt(x);
         poolItem.y          = parseInt(y);
-        poolItem.color      = parseInt(typeof color === 'number' ? color : color.value);
+        poolItem.color      = parseInt(typeof color == 'number' ? color : color.value);
         poolItem.rotation   = parseFloat(rotation);
         poolItem.scaleX     = parseFloat(scaleX);
         poolItem.scaleY     = parseFloat(scaleY);
@@ -154,7 +154,7 @@ module Scene = proto {
      */
     public addEmitter: func(object blendMode, Emitter emitter, finite localTime, finite x, finite y) {
 
-        if (emitter.ready !== true) {
+        if (emitter.ready != true) {
             return;
         }
 

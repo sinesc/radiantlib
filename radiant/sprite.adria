@@ -85,7 +85,7 @@ module Sprite = proto (Listenable) {
         this.radiant = radiant;
         this.frames = [];
 
-        if (typeof params === 'string') {
+        if (typeof params == 'string') {
             params = new Parameter(params);
         }
 
@@ -138,8 +138,8 @@ module Sprite = proto (Listenable) {
 
         var layout = params.layout;
 
-        if (layout === Parameter::LAYOUT_AUTO) {
-            layout = (params.width * params.count === this.texture.width ? Parameter::LAYOUT_HORIZONTAL : Parameter::LAYOUT_VERTICAL);
+        if (layout == Parameter::LAYOUT_AUTO) {
+            layout = (params.width * params.count == this.texture.width ? Parameter::LAYOUT_HORIZONTAL : Parameter::LAYOUT_VERTICAL);
         } else {
             layout = params.layout;
         }
@@ -169,7 +169,7 @@ module Sprite = proto (Listenable) {
 
         var spl, x, y;
 
-        if (layout === Parameter::LAYOUT_HORIZONTAL) {
+        if (layout == Parameter::LAYOUT_HORIZONTAL) {
             spl = texture.width / spriteWidth;
             x = Math.floor(id % spl) * spriteWidth;
             y = Math.floor(id / spl) * spriteHeight;

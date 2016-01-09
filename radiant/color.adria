@@ -35,7 +35,7 @@ var rPos = 0, gPos = 8, bPos = 16, aPos = 24;
 
     // result does not equal 256: native format is not little endian, convert byte positions to big endian
 
-    if (new Int16Array(buffer)[0] !== 256) {
+    if (new Int16Array(buffer)[0] != 256) {
         rPos = 24 - rPos;
         gPos = 24 - gPos;
         bPos = 24 - bPos;
@@ -135,7 +135,7 @@ module Color = proto {
      * @return integer
      */
     toInteger: func(alpha) {
-        if (typeof alpha === 'undefined') {
+        if (typeof alpha == 'undefined') {
             return this.value;
         } else {
             return (this.value & aFilter) | (alpha << aPos);

@@ -73,7 +73,7 @@ module Texture = proto {
      */
     public use: func(finite unit = 0) {
 
-        if (this.radiant.currentTextures[unit] !== this) {
+        if (this.radiant.currentTextures[unit] != this) {
             var gl = this.radiant.gl;
             gl.activeTexture(gl.TEXTURE0 + unit);
             gl.bindTexture(gl.TEXTURE_2D, this.handle);

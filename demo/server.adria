@@ -84,7 +84,7 @@ var server = http.createServer(func(request, response) {
     var filename = null;
     var extension = null;
 
-    if (request.url === '/index.html' || request.url === '/') {
+    if (request.url == '/index.html' || request.url == '/') {
 
         filename = documentRoot + '/index.html';
         extension = 'html';
@@ -99,14 +99,14 @@ var server = http.createServer(func(request, response) {
     // verify that file is located inside document root
 
     filename = path.resolve(filename);
-    var isValid = filename.slice(0, documentRoot.length +1) === (documentRoot + '/');
+    var isValid = filename.slice(0, documentRoot.length +1) == (documentRoot + '/');
 
     // send response
 
-    if (isValid && extension !== null && contentTypes.hasOwnProperty(extension)) {
+    if (isValid && extension != null && contentTypes.hasOwnProperty(extension)) {
 
         fs.readFile(filename, func(err, data) {
-            if (err !== null) {
+            if (err != null) {
                 console.log('[server] 404 ' + request.url + ' => ' + filename);
                 response.writeHead(404, { 'Content-Type': 'text/plain' });
                 response.end('HTTP 404 Not Found');

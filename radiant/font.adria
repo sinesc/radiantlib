@@ -41,14 +41,14 @@ module Font = proto (Listenable) {
 
         this.radiant = radiant;
 
-        if (name !== null) {
+        if (name != null) {
             this.load(name);
         }
     },
 
     public ready: prop {
         get: func() {
-            return this.characters !== null;
+            return this.characters != null;
         }
     },
 
@@ -65,7 +65,7 @@ module Font = proto (Listenable) {
         var sizeMatch = /([0-9]+(px|pt|em))/;
         var testString = '^,Wmuli178 _*~#';
 
-        if (sizeMatch.test(name) !== true) {
+        if (sizeMatch.test(name) != true) {
             throw new Exception('font size must be specified');
         }
 
@@ -79,7 +79,7 @@ module Font = proto (Listenable) {
         var interval = setInterval(func() {
             var measure = ctx.measureText(testString);
 
-            if (measure.width !== initialMeasure.width) {
+            if (measure.width != initialMeasure.width) {
                 clearInterval(interval);
                 callback.call(that, name, ctx);
             }
@@ -123,7 +123,7 @@ module Font = proto (Listenable) {
 
         var uv = null;
 
-        if (this.texture !== null) {
+        if (this.texture != null) {
             this.texture.destroy();
         }
 

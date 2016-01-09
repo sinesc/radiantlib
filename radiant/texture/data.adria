@@ -54,7 +54,7 @@ module TextureData = proto (Texture) {
         for (var i = 0, len = colors.length; i < len; ++i) {
 
             var raw = colors[i];
-            color.value = typeof raw === 'number' ? raw : raw.value;
+            color.value = typeof raw == 'number' ? raw : raw.value;
 
             data[i*4]     = color.r;
             data[i*4+1]   = color.g;

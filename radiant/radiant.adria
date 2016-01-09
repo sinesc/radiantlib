@@ -68,19 +68,19 @@ module Radiant = proto (Listenable) {
      */
     public constructor: func(finite width, finite height, boolean transparent = false, boolean antialiasing = false, object? canvas = null, object? debug = null) {
 
-        if (canvas !== null) {
+        if (canvas != null) {
             this.canvas = canvas;
         } else {
             this.canvas = document.createElement('canvas');
 
-            if (debug !== null) {
+            if (debug != null) {
                 if (WebGLDebugUtils) {
                     this.canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(this.canvas);
                 }
                 debug.canvas = this.canvas;
             }
 
-            if (transparent !== true) {
+            if (transparent != true) {
                 this.canvas.setAttribute('moz-opaque', '');
             }
         }
@@ -110,7 +110,7 @@ module Radiant = proto (Listenable) {
             }
         }
 
-        if (debug !== null) {
+        if (debug != null) {
             if (WebGLDebugUtils) {
                 this.gl = WebGLDebugUtils.makeDebugContext(this.gl);
             }
@@ -125,10 +125,10 @@ module Radiant = proto (Listenable) {
 
     public handleEvent: func(event) {
 
-        if (event.type === 'webglcontextlost') {
+        if (event.type == 'webglcontextlost') {
             event.preventDefault();
             this.execute('contextlost');
-        } else if (event.type === 'webglcontextrestored') {
+        } else if (event.type == 'webglcontextrestored') {
             this.restoreContext();
             this.execute('contextrestored');
         }
@@ -210,7 +210,7 @@ module Radiant = proto (Listenable) {
      */
     public width: prop {
         set: func(value) {
-            if (value !== this.canvas.width) {
+            if (value != this.canvas.width) {
                 this.canvas.width = value;
                 this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
                 this.execute('resize', this.canvas.width, this.canvas.height);
@@ -226,7 +226,7 @@ module Radiant = proto (Listenable) {
      */
     public height: prop {
         set: func(value) {
-            if (value !== this.canvas.height) {
+            if (value != this.canvas.height) {
                 this.canvas.height = value;
                 this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
                 this.execute('resize', this.canvas.width, this.canvas.height);

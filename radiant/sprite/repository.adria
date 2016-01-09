@@ -48,7 +48,7 @@ module Repository = proto {
 
         if (this.has(name)) {
 
-            if (callback !== null) {
+            if (callback != null) {
                 setTimeout(func() { callback.apply(context, params); }, 0);
             }
 
@@ -60,7 +60,7 @@ module Repository = proto {
         var sprite = new Sprite(this.radiant, name);
         this.sprites[name] = sprite;
 
-        if (callback !== null) {
+        if (callback != null) {
             sprite.once('load', params, context, callback);
         }
 
@@ -74,7 +74,7 @@ module Repository = proto {
      * @return boolean
      */
     public has: func(string name) {
-        return typeof this.sprites[name] !== 'undefined';
+        return typeof this.sprites[name] != 'undefined';
     },
 
     /**
